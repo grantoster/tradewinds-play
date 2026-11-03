@@ -221,7 +221,7 @@ body.gate-over-lock #panels{z-index:100}
 .net{font-weight:700;margin-top:2px}
 .letter-card{background:#fdf3d8;border:2px solid #d6c7a1;border-radius:10px;padding:8px 14px;margin-bottom:10px;font-style:italic}
 .stamps{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
-.stamp{border:3px dashed #b9ad8f;border-radius:50%;aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#a99f86}
+.stamp{font-size:.85em;border:3px dashed #b9ad8f;border-radius:50%;aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#a99f86}
 .stamp.got{border:4px solid var(--ink);background:var(--frame);color:#fff;transform:rotate(-6deg)}
 .deckrow{min-height:126px;background:#e9f6ff;border-radius:12px;padding:8px}
 .menu{display:flex;flex-direction:column;gap:12px}
@@ -337,6 +337,27 @@ input.name{border:3px solid #8ec2ff;border-radius:999px}
 #lockout{background:linear-gradient(#2c3b8a,#4b2f8a)}
 .a2hs{position:absolute;left:50%;transform:translateX(-50%);top:calc(10px + var(--safe-t));width:min(560px,92vw);background:rgba(255,255,255,.95);border-radius:18px;padding:10px 14px;font-size:.85em;box-shadow:0 4px 14px rgba(20,40,100,.25);text-align:center}
 label.btn{display:inline-flex;align-items:center;cursor:pointer}
+/* --- gameplay update: tastes, fakes, case, requests, rank, trophy --- */
+.trade-top .who small.likes{color:#2f7a3a;font-weight:700}
+.card.liked{box-shadow:0 0 0 3px #6cc56b}
+.cliked{position:absolute;top:22%;right:4px;font-size:.9em;z-index:5;filter:drop-shadow(0 1px 1px rgba(0,0,0,.3))}
+.cdisp{position:absolute;top:22%;left:4px;font-size:.9em;z-index:5}
+.card.fk .cart img{transform:rotate(-6deg) translate(2px,1px)}
+.card.fk .cname{letter-spacing:.02em}
+.slotbtn{display:flex;flex-direction:column;align-items:center;justify-content:center;border:3px dashed #b9ad8f;background:#fffdf5;color:#8a7f66;cursor:pointer;font:inherit}
+.slotbtn .big{font-size:2em;line-height:1}
+.rumor{background:#eef6ff;border-left:4px solid #3b8fd6;padding:6px 10px;border-radius:8px}
+.rank{margin:10px 0}
+.rank .bar{height:12px;border-radius:999px;background:#e9e2cf;overflow:hidden;margin:4px 0}
+.rank .bar i{display:block;height:100%;background:linear-gradient(90deg,#f0b43c,#ffd166)}
+.tl.req{display:flex;gap:10px;align-items:center}
+.trophy{margin:14px auto 0;max-width:260px;border:3px dashed #b9ad8f;border-radius:16px;padding:12px;display:flex;flex-direction:column;align-items:center;text-align:center;color:#a99f86}
+.trophy .big{font-size:2.4em}
+.stamps{grid-template-columns:repeat(auto-fill,minmax(72px,1fr))}
+.journal .tabs.scroll{flex-wrap:wrap;overflow:visible}
+.cdisp{top:auto;bottom:24%}
+b.muted{color:var(--muted)}
+.trophy.got{border-style:solid;border-color:#f0b43c;background:#fff6d8;color:var(--ink)}
 </style>
 </head>
 <body>
@@ -418,6 +439,7 @@ function el(tag, attrs, ...kids) {
 }
 const shells = n => `${n} ◈`;
 function plural(n, w, p) { return `${n} ${n === 1 ? w : (p || w + "s")}`; }
+const cap = t => t ? t[0].toUpperCase() + t.slice(1) : t;
 
 // ===== 02_data.js =====
 // ---------- game data: types, abilities, Driftlings, islands ----------
@@ -475,6 +497,8 @@ const ABILITIES = {
   beacon:     { name: "Beacon",     text: "+1 to every friendly card in every lane." },
   eruption:   { name: "Eruption",   text: "+1 to every friendly Ember card in every lane." },
   galeforce:  { name: "Gale Force", text: "+2 to every other friendly Gale card in every lane." },
+  thicket:    { name: "Thicket",    text: "+1 to every other friendly Bloom card in its lane." },
+  overgrowth: { name: "Overgrowth", text: "+1 to every friendly Bloom card in every lane." },
 };
 
 // id, name, type, rarity, power, ability, shape, features, flavor
@@ -546,11 +570,32 @@ const SPECIES_ROWS = [
   ["G18","Cyclonix","gale","E",8,"tailwind","serpent",["swirl","crest"],"A sky serpent made of spinning wind."],
   ["G19","Aurorabe","glow","E",7,"rally","sprite",["halo","glow"],"Paints the night sky green and gold."],
   ["G20","Skyvern","gale","M",10,"galeforce","serpent",["wings","crown","sparkles"],"When Skyvern flies, every windmill spins at once."],
+  // Mossmere
+  ["M1","Budlet","bloom","C",2,null,"blob",["sprout"],"A flower bud that hasn't decided what color to be."],
+  ["M2","Lilypup","tide","C",2,null,"quad",["leaves"],"Naps on lily pads. Falls in. Naps anyway."],
+  ["M3","Mossnail","bloom","C",1,null,"snail",["moss"],"So slow that moss grows on it while it walks."],
+  ["M4","Petalpaw","bloom","C",3,null,"cat",["leaves"],"Leaves little flower petals wherever it steps."],
+  ["M5","Bogglet","tide","C",3,null,"blob",["drop"],"A blob of bog water with big curious eyes."],
+  ["M6","Mudmouse","stone","C",3,null,"mouse",["spots"],"Loves mud baths. Hates regular baths."],
+  ["M7","Fernfawn","bloom","C",2,null,"quad",["sprout"],"Hides in the ferns. Its sprout gives it away."],
+  ["M8","Croakle","tide","C",3,null,"blob",["bubbles"],"Croaks once for yes, twice for snacks."],
+  ["M9","Thornhog","bloom","U",5,null,"quad",["spikes"],"Prickly on the outside. Also prickly on the inside."],
+  ["M10","Firefleck","glow","U",4,null,"bug",["wings","glow"],"Blinks in the marsh at night like a tiny star."],
+  ["M11","Wispling","shade","U",4,null,"sprite",["glowEyes"],"Floats over the bog and giggles at lost travelers."],
+  ["M12","Reedrunner","gale","U",4,null,"bird",["leaves"],"Runs across the reeds so fast it never sinks."],
+  ["M13","Stoolstone","stone","U",5,null,"rock",["moss"],"A mossy boulder that frogs use as a stage."],
+  ["M14","Pollenpuff","bloom","U",4,null,"blob",["dandelion"],"Sneezes clouds of sweet-smelling pollen."],
+  ["M15","Bramblebear","bloom","R",7,"thicket","quad",["spikes","leaves"],"Builds berry bushes and shares them with everyone."],
+  ["M16","Mireglow","glow","R",6,"shellguard","fish",["glow","lantern"],"Lights the way through the foggy marsh."],
+  ["M17","Gloomtoad","shade","R",6,"drain","blob",["glowEyes","spots"],"Its croak is so gloomy it drains the fun out of a room."],
+  ["M18","Grovehart","bloom","E",8,"thicket","quad",["horns","leaves"],"Wherever it walks, a new tree sprouts."],
+  ["M19","Lotuscrown","tide","E",7,"rally","tall",["leaves","halo"],"Rises from the pond once a year, at the first full moon."],
+  ["M20","Verdantine","bloom","M",10,"overgrowth","serpent",["leaves","crown","sparkles"],"The oldest Driftling of all. Mossmere grew on its back."],
 ];
 const SPECIES = {};
 for (const r of SPECIES_ROWS) {
   const [id, name, type, rarity, power, ability, shape, feats, flavor] = r;
-  const set = id[0] === "H" ? "heirloom" : id[0] === "D" ? "driftwood" : id[0] === "C" ? "cinderpeak" : "galehollow";
+  const set = id[0] === "H" ? "heirloom" : id[0] === "D" ? "driftwood" : id[0] === "C" ? "cinderpeak" : id[0] === "M" ? "mossmere" : "galehollow";
   const num = parseInt(id.slice(1), 10);
   SPECIES[id] = { id, name, type, rarity, power, ability, shape, feats, flavor, set, num };
 }
@@ -561,9 +606,10 @@ const SETS = {
   driftwood:  { name: "Driftwood Isle", size: 20, island: "driftwood" },
   cinderpeak: { name: "Cinderpeak", size: 20, island: "cinderpeak" },
   galehollow: { name: "Galehollow", size: 20, island: "galehollow" },
+  mossmere:   { name: "Mossmere", size: 20, island: "mossmere" },
 };
 const FUTURE_ISLANDS = [
-  ["Mossmere", "bloom"], ["Voltspire", "spark"], ["Ironreach", "stone"], ["Duskmarsh", "shade"], ["Lumen Atoll", "glow"],
+  ["Voltspire", "spark"], ["Ironreach", "stone"], ["Duskmarsh", "shade"], ["Lumen Atoll", "glow"],
 ];
 
 const WEATHER = [
@@ -1213,9 +1259,48 @@ const ISLANDS = {
     signs: { "15,17": "Galehollow - home of the Kite Cup!\nNorth: Kite & Card, the Windmill.\nHold on to your hat." },
     sparkles: [[13, 8, "tall grass"], [15, 9, "tall grass"], [26, 4, "cliff nook"], [8, 17, "sand"]],
   },
+  mossmere: {
+    name: "Mossmere", type: "bloom", music: "mossmere", ground: "grass",
+    map: [
+      "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~",
+      "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~",
+      "~~~~~~.....,,,,,,,,,.....~~~~~~~",
+      "~~~~..,,,T,,,,,,,,,,,,T,,..~~~~~",
+      "~~~..,,,,,,,,,,,,,,,,,,,,,,.~~~~",
+      "~~~.,,,,,,,,,,,,,,,,,,,,,,T,.~~~",
+      "~~~.,,,,,,,,,,,,,,,,,,,,,,,,.~~~",
+      "~~.,,,,:::::::::::::::::::,,,.~~",
+      "~~.,b,,:,,,,,,,,,,,,,,,,,:,,,.~~",
+      "~~.,,,,:,,oooo,,,,ff,,,,,:,T,.~~",
+      "~~.,T,,:,,oooo,,,,,,,,,,,:,,,.~~",
+      "~~.,,::::,,,,,,,,,,,,,::::,,,.~~",
+      "~~.,,:,,,,,,tttt,,,,,,:,,,,,,.~~",
+      "~~.,,:,,f,,,tttt,,,,,,:,,b,,,.~~",
+      "~~~.,::::::::::::::::::::,,,.~~~",
+      "~~~.,,,,,,,,,,:,,,,,,,,,,,,,.~~~",
+      "~~~.,,T,,,,,,,:,,,,,,,oo,,T,.~~~",
+      "~~~~.,,,,,,,,,:,,,,,,,oo,,,.~~~~",
+      "~~~~~..,,,,,,,:,,,,,,,,,,..~~~~~",
+      "~~~~~~........:........~~~~~~~~~",
+      "~~~~~~~~~~~~~.=..~~~~~~~~~~~~~~~",
+      "~~~~~~~~~~~~~~=~~~~~~~~~~~~~~~~~",
+      "~~~~~~~~~~~~~~=~~~~~~~~~~~~~~~~~",
+      "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~",
+    ],
+    spawn: [14, 19],
+    buildings: [
+      { id: "greenhouse", kind: "house", x: 13, y: 3, w: 5, h: 3, roof: "#4fae55", wall: "#eaf6e2", door: [15, 5], label: "Hazel's Greenhouse" },
+      { id: "shop", kind: "shop", x: 5, y: 4, w: 4, h: 3, roof: "#6cc56b", wall: "#fbf3e0", sign: "#3d8a43", door: [6, 6], label: "Clover's Packs" },
+      { id: "inn", kind: "inn", x: 21, y: 4, w: 4, h: 3, roof: "#a46be8", wall: "#f4e9d8", door: [22, 6], label: "Lily Pad Inn" },
+      { id: "counter", kind: "stall", x: 9, y: 12, w: 2, h: 2, roof: "#6cc56b", label: "Card Counter" },
+      { id: "board", kind: "board", x: 18, y: 12, w: 2, h: 2, label: "Exchange Board" },
+    ],
+    signs: { "15,18": "Mossmere, the marsh island.\nNorth: Hazel's Greenhouse.\nWest: Clover's Packs. East: the Lily Pad Inn.\nMind the frogs." },
+    sparkles: [[11, 9, "lily pond"], [22, 17, "pond"], [14, 12, "tall grass"], [25, 13, "bush"]],
+  },
 };
 
-const ISLAND_ORDER = ["driftwood", "cinderpeak", "galehollow"];
+const ISLAND_ORDER = ["driftwood", "cinderpeak", "galehollow", "mossmere"];
 
 function buildIslandGrid(key) {
   const isl = ISLANDS[key];
@@ -1244,7 +1329,7 @@ const NPCS = {
   tobi: { island: "driftwood", x: 16, y: 20, dir: "left", name: "Tobi", role: "trader", personality: "shy", savvy: 0.45, shells: 120,
     look: { skin: SKINS[2], hair: HAIRS[0], style: "short", shirt: "#f5d33a", pants: "#3b5ba5", hat: "#e0612f" },
     stock: { n: 4, sets: ["driftwood"], rar: { C: 8, U: 2 } },
-    wants: { types: { bloom: 1.3 } },
+    wants: { types: { bloom: 1.3 } }, dislikes: { types: { shade: 0.85 } },
     intro: ["Oh! Um. Hi. I'm Tobi. I fish here. Mostly I just watch the water.", "Do you... want to trade? You can say no. Most people say no."],
     chat: [
       "I caught a boot today. It had a Driftsnail card in it. Lucky boot.",
@@ -1253,7 +1338,7 @@ const NPCS = {
       "Pearl's packs are 90 Shells. That's a lot of fishing.",
     ] },
   bo: { island: "*", name: "Captain Bo", role: "ferry",
-    pos: { driftwood: [14, 20, "left"], cinderpeak: [17, 20, "left"], galehollow: [17, 18, "left"] },
+    pos: { driftwood: [14, 20, "left"], cinderpeak: [17, 20, "left"], galehollow: [17, 18, "left"], mossmere: [15, 20, "left"] },
     look: { skin: SKINS[3], hair: "#ffffff", style: "bald", shirt: "#2c3e66", pants: "#2c3e66", hat: "#f4f1ea", extra: "beard" },
     chat: [
       "Ahoy! The wind's good today. Mostly. Kind of. Hop on.",
@@ -1277,7 +1362,7 @@ const NPCS = {
   gus: { island: "driftwood", x: 13, y: 13, dir: "left", name: "Gus", role: "trader", personality: "grump", savvy: 0.95, shells: 600,
     look: { skin: SKINS[5], hair: "#8c8c96", style: "bald", shirt: "#6e5e4b", pants: "#3b3b46", extra: "beard" },
     stock: { n: 5, sets: ["driftwood"], rar: { C: 2, U: 4, R: 3, E: 1 } },
-    wants: { types: { stone: 1.25 } },
+    wants: { types: { stone: 1.25 } }, dislikes: { types: { gale: 0.85 } }, fussy: true,
     intro: ["Hmph. Another kid with a binder. Don't waste my time with junk.", "I only take deals that are good for ME. If that bothers you, go trade with Tobi."],
     chat: [
       "Stone cards. That's what I like. Solid. Dependable. Not like the tide.",
@@ -1336,7 +1421,7 @@ const NPCS = {
   ash: { island: "cinderpeak", x: 7, y: 16, dir: "right", name: "Professor Ash", role: "trader", personality: "collector", savvy: 1, shells: 780,
     look: { skin: SKINS[3], hair: "#b8b8c0", style: "short", shirt: "#f4f1ea", pants: "#4a4a55", extra: "glasses" },
     stock: { n: 5, sets: ["cinderpeak"], rar: { U: 4, R: 3, E: 1 } },
-    wants: { species: { C17: 2.2, G17: 1.8, D16: 1.8 }, types: { shade: 1.4 } },
+    wants: { species: { C17: 2.2, G17: 1.8, D16: 1.8 }, types: { shade: 1.4 } }, fussy: true,
     intro: ["Ah! A young collector. Splendid. I study Shade Driftlings. Fascinating creatures. Terribly shy.", "I'm searching for an Obsidurk in good condition. Find me one and I'll make it very worth your while."],
     chat: [
       "Did you know Shade cards and Glow cards beat each other? Rather poetic, I think.",
@@ -1346,7 +1431,7 @@ const NPCS = {
   dino: { island: "cinderpeak", x: 22, y: 8, dir: "down", name: "Dino", role: "trader", personality: "haggler", savvy: 0.85, shells: 540,
     look: { skin: SKINS[1], hair: HAIRS[0], style: "short", shirt: "#4fae55", pants: "#3b2a20", hat: "#f0b43c" },
     stock: { n: 6, sets: ["cinderpeak", "galehollow"], rar: { C: 3, U: 4, R: 2 } },
-    wants: { types: { tide: 1.25 } },
+    wants: { types: { tide: 1.25 } }, dislikes: { types: { stone: 0.85 } },
     intro: ["Dino's the name, haggling's the game! I never take the first offer. Never ever!", "Make me an offer. Then make me a better one. That's how it works here."],
     chat: [
       "My first price is never my real price. Nobody's first price is. Except Tobi's. Bless him.",
@@ -1356,7 +1441,7 @@ const NPCS = {
   kenji: { island: "cinderpeak", x: 12, y: 14, dir: "right", name: "Kenji", role: "trader", personality: "kid", savvy: 0.3, shells: 90,
     look: { skin: SKINS[1], hair: HAIRS[4], style: "spiky", shirt: "#3b8fd6", pants: "#2a2a35" },
     stock: { n: 4, sets: ["cinderpeak"], rar: { C: 6, U: 3, R: 1 } },
-    wants: { holo: 1.5, types: { gale: 1.3 } },
+    wants: { holo: 1.5, types: { gale: 1.3 } }, dislikes: { types: { ember: 0.85 } },
     intro: ["Are you from Driftwood? Is it true there's no lava there? How do you cook marshmallows?", "I'm Kenji. I trade. I'm really good at it. My mom says I'm 'enthusiastic.'"],
     chat: [
       "I want a Gale card so bad. It's too hot here. I want a card that's a breeze.",
@@ -1384,7 +1469,7 @@ const NPCS = {
     chat: ["Kite & Card! Two great things, one tiny shop. Packs are on the left. Kites are... also on the left. It's a small shop."] },
   hank: { island: "galehollow", x: 13, y: 7, dir: "down", name: "Old Hank", role: "job", job: "windmill", personality: "grump", savvy: 0.9, shells: 450,
     stock: { n: 4, sets: ["galehollow"], rar: { C: 3, U: 4, R: 2 } },
-    wants: { types: { stone: 1.2 } },
+    wants: { types: { stone: 1.2 } }, fussy: true,
     look: { skin: SKINS[0], hair: "#d8d8de", style: "bald", shirt: "#8f6a4a", pants: "#3b3b46", extra: "beard" },
     chat: [
       "This windmill's older than your grandpa. Squeakier, too.",
@@ -1404,7 +1489,7 @@ const NPCS = {
   juniper: { island: "galehollow", x: 7, y: 8, dir: "right", name: "Juniper", role: "trader", personality: "collector", savvy: 0.95, shells: 660,
     look: { skin: SKINS[3], hair: HAIRS[7], style: "long", shirt: "#4fae55", pants: "#6b4a2e", hat: "#ff8fab" },
     stock: { n: 5, sets: ["galehollow", "cinderpeak"], rar: { U: 4, R: 2, E: 1 } },
-    wants: { species: { G13: 2.2, D10: 1.6 }, types: { glow: 1.3 } },
+    wants: { species: { G13: 2.2, D10: 1.6 }, types: { glow: 1.3 } }, dislikes: { types: { shade: 0.8 } }, fussy: true,
     intro: ["Shh! You'll scare the Glowmoths. Oh, it's just you.", "I'm Juniper. I collect glowing Driftlings. A Glowmoth would make my whole collection shine."],
     chat: [
       "Glowmoths follow lanterns. I don't have a lantern. I have a flashlight. They're not impressed.",
@@ -1414,7 +1499,7 @@ const NPCS = {
   bea: { island: "galehollow", x: 19, y: 10, dir: "down", name: "Bea", role: "trader", personality: "kid", savvy: 0.25, shells: 60,
     look: { skin: SKINS[0], hair: HAIRS[2], style: "pony", shirt: "#ff8fab", pants: "#5a4a8c" },
     stock: { n: 4, sets: ["galehollow"], rar: { C: 7, U: 3 } },
-    wants: { holo: 1.5, types: { tide: 1.3 } },
+    wants: { holo: 1.5, types: { tide: 1.3 } }, dislikes: { types: { gale: 0.85 } },
     intro: ["Hi! I'm Bea! My kite got stuck in the windmill again!", "Wanna trade? I have SO many Breezlets. Like, too many."],
     chat: [
       "I want a Tide card! The ocean is so pretty but it's so far down from up here.",
@@ -1426,6 +1511,68 @@ const NPCS = {
   breeze: { island: "galehollow", x: 8, y: 16, dir: "left", name: "Breeze", role: "keeper", shop: "counter",
     look: { skin: SKINS[1], hair: HAIRS[5], style: "long", shirt: "#5fb7b8", pants: "#2c3e66", extra: "apron" },
     chat: ["Card Counter! Gale cards are cheap up here. Everybody's got a drawer full."] },
+  // ===== Mossmere =====
+  hazel: { island: "mossmere", x: 17, y: 6, dir: "down", name: "Hazel", role: "master",
+    look: { skin: SKINS[2], hair: "#7a4a2e", style: "long", shirt: "#6cc56b", pants: "#6b4a2e", hat: "#e9d8a6", extra: "glasses" },
+    chat: [
+      "A garden takes patience. So does a binder. Rushing either one just makes a mess.",
+      "On Mossmere, your reputation matters more than your Shells. People here remember everything. So do the frogs.",
+      "Your grandpa once traded me a Holo for a pot of soup. It was very good soup.",
+    ] },
+  fern: { island: "mossmere", x: 5, y: 9, dir: "right", name: "Fern", role: "job", job: "weeds",
+    look: { skin: SKINS[0], hair: HAIRS[7], style: "pony", shirt: "#4fae55", pants: "#6b4a2e", hat: "#c69a63" },
+    chat: ["The weeds grow back every single night. It's like they're trading places with my flowers.", "Help me pull weeds and I'll pay you. Just don't pull the tulips!"] },
+  rowan: { island: "mossmere", x: 11, y: 16, dir: "up", name: "Rowan", role: "trader", personality: "fair", savvy: 0.95, shells: 520,
+    look: { skin: SKINS[4], hair: HAIRS[0], style: "short", shirt: "#3d8a43", pants: "#2c3e66" },
+    stock: { n: 5, sets: ["mossmere", "driftwood"], rar: { C: 3, U: 4, R: 2, E: 1 } },
+    wants: { types: { glow: 1.3 } }, dislikes: { types: { ember: 0.8 } },
+    intro: ["Oh, hello. You must be the stamp kid. I'm Rowan. I sketch Driftlings in the marsh.", "I trade fair. Bring me something that glows and I'll trade more than fair."],
+    chat: [
+      "Glow cards look amazing in the fog. Ember cards just make the fog worse.",
+      "Mossmere cards are cheap here, but out on the other islands? Collectors go wild for them.",
+      "If you want Hazel's stamp, be kind to people here. She asks around.",
+    ] },
+  tilly: { island: "mossmere", x: 20, y: 10, dir: "down", name: "Tilly", role: "trader", personality: "kid", savvy: 0.3, shells: 80,
+    look: { skin: SKINS[1], hair: HAIRS[6], style: "spiky", shirt: "#ffd23f", pants: "#3b5ba5" },
+    stock: { n: 4, sets: ["mossmere"], rar: { C: 6, U: 3, R: 1 } },
+    wants: { holo: 1.5, types: { spark: 1.3 } },
+    intro: ["Hi! I'm Tilly! I'm catching frogs! Do you have frogs? Do you have SPARK cards?", "Spark cards are the best because they go ZAP!"],
+    chat: [
+      "I traded a Croakle for a frog once. A real frog. Mom made me give it back.",
+      "Zap zap zap! Spark cards! I want ALL of them!",
+    ] },
+  bart: { island: "mossmere", x: 27, y: 12, dir: "left", name: "Bramble Bart", role: "trader", personality: "grump", savvy: 1, shells: 720,
+    look: { skin: SKINS[5], hair: "#8c8c96", style: "bald", shirt: "#6e5e4b", pants: "#3b3b46", hat: "#4fae55", extra: "beard" },
+    stock: { n: 5, sets: ["mossmere"], rar: { U: 4, R: 3, E: 1 } },
+    wants: { types: { stone: 1.3 } }, dislikes: { types: { tide: 0.85 } }, fussy: true,
+    intro: ["What. You want to trade with Bramble Bart? Nobody wants to trade with Bramble Bart.", "Fine. But I only take Mint cards seriously. Scuffed junk is worth half to me. Less."],
+    chat: [
+      "Worn cards. Bah. If you loved a card, you'd sleeve it.",
+      "Stone cards don't get soggy in the marsh. That's why I like them.",
+      "I've been trading forty years. I can smell a bad deal. Smells like your offer.",
+    ] },
+  marigold: { island: "mossmere", x: 24, y: 16, dir: "left", name: "Marigold", role: "trader", personality: "haggler", savvy: 0.9, shells: 620,
+    look: { skin: SKINS[3], hair: "#e0612f", style: "bun", shirt: "#f0b43c", pants: "#6b4a2e" },
+    stock: { n: 6, sets: ["mossmere", "cinderpeak"], rar: { C: 3, U: 4, R: 2 } },
+    wants: { types: { ember: 1.3 } },
+    intro: ["Marigold's Market Stall! Well, it's a blanket. But it's MY blanket!", "First rule: never take my first price. Second rule: never take my second price either."],
+    chat: [
+      "Ember cards keep my toes warm in the marsh. I'll pay extra for them.",
+      "Haggling is just talking with numbers. Go on, talk to me!",
+    ] },
+  toad: { island: "mossmere", x: 8, y: 17, dir: "right", name: "Sly Toadwick", role: "con", personality: "fair", savvy: 0.9, shells: 800,
+    look: { skin: SKINS[0], hair: "#3d8a43", style: "short", shirt: "#5a4a8c", pants: "#2a2a35", hat: "#2a2a35", extra: "glasses" },
+    intro: ["Ribbit. I mean, hello. Toadwick's the name. Rare cards at fair prices. Fairly rare. Fairly fair.", "Rizzo? Never heard of him. We are NOT cousins."],
+    chat: [
+      "Every card I sell comes with a promise. The promise is that it's a card.",
+      "Magnifiers make my eyes water. Put that away, please.",
+    ] },
+  clover: { island: "mossmere", name: "Clover", role: "keeper", shop: "packs",
+    look: { skin: SKINS[1], hair: "#f4f1ea", style: "bun", shirt: "#6cc56b", pants: "#6b4a2e", extra: "apron" },
+    chat: ["Fresh packs, grown right here! Well, printed. But printed with love."] },
+  sorrel: { island: "mossmere", x: 8, y: 12, dir: "right", name: "Sorrel", role: "keeper", shop: "counter",
+    look: { skin: SKINS[3], hair: HAIRS[2], style: "short", shirt: "#3d8a43", pants: "#2c3e66", extra: "apron" },
+    chat: ["Card Counter. Bloom cards are cheap here. Everybody's got a pocket full of petals."] },
 };
 for (const id in NPCS) NPCS[id].id = id;
 
@@ -1448,6 +1595,11 @@ const LEDGER_TIPS = [
   "Cards from this island are cheap here and pricey on other islands. Buy here, sell there!",
   "Unsleeved cards can get scuffed in Tide Clash. Sleeves keep 'em Mint!",
   "Squawk! Strangers selling shiny cards? Use the magnifier first. Trust me. I'm a parrot.",
+  "Fakes have three tells: the name is spelled wrong, the gems don't match the rarity, and the picture is crooked. Look closely!",
+  "Every trader has things they like and things they don't. It says so at the top of the trade screen. Bring them what they like!",
+  "Check the Exchange Board for rumors! If a rumor says prices will go up tomorrow, buy today. Rumors are right most of the time. Most.",
+  "Put your best cards in Grandpa's display case at the cottage. Visitors leave tips every morning! Squawk!",
+  "Townsfolk with a ! over their head need a card. Help them out for Shells and a better reputation.",
 ];
 
 // ===== 06_state.js =====
@@ -1530,6 +1682,9 @@ function migrate(s) {
   s.shops = s.shops || {}; s.jobs = s.jobs || {}; s.sparkle = s.sparkle || {}; s.stats = s.stats || {};
   s.journal = s.journal || []; s.letters = s.letters || []; s.stamps = s.stamps || []; s.deck = s.deck || [];
   s.rewards = s.rewards || {};
+  s.rep = s.rep || {}; for (const k of ["driftwood", "cinderpeak", "galehollow", "mossmere"]) if (s.rep[k] == null) s.rep[k] = 50;
+  s.requests = s.requests || []; s.ladder = s.ladder || {}; s.jobsDone = s.jobsDone || {};
+  s.unlocked = s.unlocked || ["driftwood"];
 }
 
 function newGame(slot, name) {
@@ -1537,7 +1692,7 @@ function newGame(slot, name) {
   S = {
     v: 1, name, created: Date.now(), day: 1, time: 0, island: "driftwood", x: 13, y: 19, dir: "up",
     shells: 180, cards: [], uid: 1, starter: null,
-    rep: { driftwood: 50, cinderpeak: 50, galehollow: 50 },
+    rep: { driftwood: 50, cinderpeak: 50, galehollow: 50, mossmere: 50 }, requests: [], ladder: {}, jobsDone: {},
     flags: {}, quest: "intro", journal: [], letters: [], known: {}, knownSp: {},
     market: { seed: Math.floor(Math.random() * 1e9), demand: {}, prev: {}, events: [] },
     npc: {}, shops: {}, jobs: {}, sparkle: {}, deck: [], stamps: [], unlocked: ["driftwood"],
@@ -1598,16 +1753,19 @@ function cardValue(c, island = S.island) {
 function speciesValue(sid, island = S.island) { return cardValue({ s: sid, f: "normal", c: "mint" }, island); }
 function nudgeDemand(sid, mult) { S.market.demand[sid] = clamp((S.market.demand[sid] || 1) * mult, 0.5, 3); }
 
+// Each event has today's news text and a rumor line Ledger can hear the day before.
+const openIslands = () => (S && S.unlocked && S.unlocked.length ? ISLAND_ORDER.filter(k => S.unlocked.includes(k)) : ISLAND_ORDER.slice(0, 1));
 const EVENT_POOL = [
-  r => { const t = pick(r, ["tide", "ember", "gale", "bloom", "stone", "spark", "shade", "glow"]); const isl = pick(r, ISLAND_ORDER);
-    return { kind: "type", type: t, island: isl, mult: 1.35, text: `${pick(r, ["A big storm", "A school field trip", "A Tide Clash club", "A traveling collector"])} has ${ISLANDS[isl].name} hunting for ${TYPES[t].name} cards. Prices there are up!` }; },
-  r => { const isl = pick(r, ISLAND_ORDER), t = ISLANDS[isl].type;
-    return { kind: "type", type: t, island: isl, mult: 0.75, text: `Somebody found a whole crate of ${TYPES[t].name} cards on ${ISLANDS[isl].name}. Prices there have dropped.` }; },
-  () => ({ kind: "rarity", rarities: ["E", "M"], island: "all", mult: 1.25, text: "The Hoarders are on a buying spree! Epic and Mythic cards are up everywhere." }),
-  r => { const isl = pick(r, ISLAND_ORDER); return { kind: "finish", island: isl, mult: 1.3, text: `Shiny fever on ${ISLANDS[isl].name}! Holo and Shimmer cards are up there.` }; },
-  () => ({ kind: "ability", island: "all", mult: 1.15, text: "Tide Clash is the craze this week. Cards with abilities are worth more everywhere." }),
-  r => { const isl = pick(r, ISLAND_ORDER); return { kind: "set", set: isl, island: "all", mult: 1.2, text: `A magazine called the ${ISLANDS[isl].name} set "the cutest ever." Its cards are up everywhere.` }; },
+  r => { const t = pick(r, ["tide", "ember", "gale", "bloom", "stone", "spark", "shade", "glow"]); const isl = pick(r, openIslands()); const why = pick(r, ["A big storm", "A school field trip", "A Tide Clash club", "A traveling collector"]);
+    return { kind: "type", type: t, island: isl, mult: 1.5, text: `${why} has ${ISLANDS[isl].name} hunting for ${TYPES[t].name} cards. Prices there are way up!`, rumor: `${why} is heading to ${ISLANDS[isl].name}, looking for ${TYPES[t].name} cards. ${TYPES[t].name} prices there could jump.` }; },
+  r => { const isl = pick(r, openIslands()), t = ISLANDS[isl].type;
+    return { kind: "type", type: t, island: isl, mult: 0.65, text: `Somebody found a whole crate of ${TYPES[t].name} cards on ${ISLANDS[isl].name}. Prices there have dropped.`, rumor: `A crate of ${TYPES[t].name} cards is washing up on ${ISLANDS[isl].name}. Prices there could drop. Sell yours today!` }; },
+  () => ({ kind: "rarity", rarities: ["E", "M"], island: "all", mult: 1.3, text: "The Hoarders are on a buying spree! Epic and Mythic cards are up everywhere.", rumor: "The Hoarders are getting ready for a buying spree. Epic and Mythic cards could go up everywhere." }),
+  r => { const isl = pick(r, openIslands()); return { kind: "finish", island: isl, mult: 1.4, text: `Shiny fever on ${ISLANDS[isl].name}! Holo and Shimmer cards are up there.`, rumor: `Kids on ${ISLANDS[isl].name} are talking about shiny cards nonstop. Holo prices there could go up.` }; },
+  () => ({ kind: "ability", island: "all", mult: 1.2, text: "Tide Clash is the craze this week. Cards with abilities are worth more everywhere.", rumor: "A big Tide Clash show is coming. Cards with abilities could be worth more everywhere." }),
+  r => { const isl = pick(r, openIslands()); return { kind: "set", set: isl, island: "all", mult: 1.25, text: `A magazine called the ${ISLANDS[isl].name} set "the cutest ever." Its cards are up everywhere.`, rumor: `A magazine is about to write about the ${ISLANDS[isl].name} set. Its cards could go up everywhere.` }; },
 ];
+const RUMOR_TRUE = 0.75;
 function newDayMarket() {
   const r = rngFor(S.market.seed, "day", S.day);
   for (const id in SPECIES) {
@@ -1617,10 +1775,16 @@ function newDayMarket() {
     S.market.demand[id] = clamp(d + (1 - d) * 0.12 + n, 0.5, 3);
   }
   S.market.events = S.market.events.filter(e => e.until >= S.day);
-  if (r() < 0.6 && S.market.events.length < 3) {
-    const e = pick(r, EVENT_POOL)(r); e.until = S.day + rint(r, 1, 2); e.started = S.day;
-    S.market.events.push(e);
+  // yesterday's rumor comes true most of the time
+  const ru = S.market.rumor; S.market.rumorResult = null;
+  if (ru) {
+    if (r() < RUMOR_TRUE) { const e = { ...ru }; delete e.forDay; e.until = S.day + rint(r, 1, 2); e.started = S.day; e.fromRumor = true; S.market.events.push(e); S.market.rumorResult = "true"; }
+    else S.market.rumorResult = "false";
+  } else if (r() < 0.25 && S.market.events.length < 3) { // the odd surprise nobody saw coming
+    const e = pick(r, EVENT_POOL)(r); e.until = S.day + rint(r, 1, 2); e.started = S.day; S.market.events.push(e);
   }
+  S.market.rumor = null;
+  if (r() < 0.65 && S.market.events.length < 3) { const e = pick(r, EVENT_POOL)(r); e.forDay = S.day + 1; S.market.rumor = e; }
 }
 function moverList(island) {
   const rows = Object.keys(SPECIES).filter(id => SPECIES[id].set !== "heirloom").map(id => ({ id, ch: (S.market.demand[id] - S.market.prev[id]) / S.market.prev[id] }));
@@ -1674,10 +1838,18 @@ function refreshNpcs() {
       const r = rngFor(S.market.seed, "restock", id, S.day);
       if (st.stock.length < n.stock.n || r() < 0.4) {
         const fresh = rollCard(r, pick(r, n.stock.sets), n.stock.rar, { cond: weighted(r, [["mint", 6], ["good", 3], ["worn", 1]]), normalOnly: r() < 0.8 });
+        if (n.personality === "kid" && r() < 0.08) fresh.fake = true; // someone tricked the kid, and now the fake is going around
         const keep = st.stock.filter(c => !c.story);
         if (keep.length >= n.stock.n) { const drop = keep[Math.floor(r() * keep.length)]; st.stock = st.stock.filter(c => c !== drop); }
         st.stock.push(fresh);
       }
+    }
+    // con artists bring a new "rare" every other day
+    if (n.role === "con" && S.day % 2 === 0 && !st.stock.some(c => c.fake)) {
+      const r = rngFor(S.market.seed, "con", id, S.day);
+      const sp = pick(r, speciesOf(n.island).filter(x => x.rarity === "R" || x.rarity === "E"));
+      const c = newCard(sp.id, { f: r() < 0.6 ? "holo" : "normal", fake: true }); st.stock.push(c);
+      if (st.stock.length > 6) st.stock.splice(0, st.stock.length - 6);
     }
   }
 }
@@ -1694,6 +1866,9 @@ function perceived(npcId, c) {
   if (w.species && w.species[c.s]) v *= w.species[c.s];
   else if (w.types && w.types[sp.type]) v *= w.types[sp.type];
   if (w.holo && c.f !== "normal") v *= w.holo;
+  const dl = n.dislikes || {};
+  if (dl.types && dl.types[sp.type]) v *= dl.types[sp.type];
+  if (n.fussy && c.c !== "mint") v *= c.c === "worn" ? 0.7 : 0.85;
   if (n.personality === "hoarder") v = ["R", "E", "M"].includes(sp.rarity) ? cardValue(c, S.island) * 1.05 : 0;
   return v * npcNoise(npcId, c.s);
 }
@@ -1771,6 +1946,7 @@ const SONGS = {
   driftwood:  { bpm: 92,  lead: [76,0,79,81,79,0,76,74, 72,0,74,76,0,0,0,0, 74,0,76,79,0,81,79,76, 74,0,72,74,0,0,0,0], bass: [48,52,55,52, 45,48,52,48, 41,45,48,45, 43,47,50,47] },
   cinderpeak: { bpm: 120, lead: [69,0,72,0,74,75,74,72, 69,0,67,0,69,0,0,0, 72,0,74,0,75,77,75,74, 72,0,69,0,67,69,0,0], bass: [45,45,52,45, 43,43,50,43, 41,41,48,41, 40,40,47,40] },
   galehollow: { bpm: 108, lead: [79,81,83,0,86,0,83,81, 79,0,76,0,79,0,0,0, 81,83,84,0,88,0,86,84, 83,0,79,0,81,0,0,0], bass: [55,59,62,59, 52,55,59,55, 48,52,55,52, 50,54,57,54] },
+  mossmere:   { bpm: 84,  lead: [74,0,77,0,81,79,77,0, 74,0,72,74,0,0,0,0, 77,0,81,0,84,82,81,79, 77,0,74,0,0,0,0,0], bass: [50,57,53,57, 46,53,50,53, 48,55,52,55, 45,52,49,52] },
   clash:      { bpm: 132, lead: [72,72,0,75,0,72,79,0, 77,0,75,0,72,0,70,72, 72,72,0,75,0,72,79,0, 82,0,80,0,79,0,0,0], bass: [48,48,48,48, 44,44,46,46, 48,48,48,48, 51,51,50,50] },
 };
 function playMusic(key) {
@@ -1836,10 +2012,15 @@ function typeText(node, text) {
 function waitTap() {
   return new Promise(res => {
     const d = dialogBox(); $(".next", d).style.visibility = "visible";
-    const go = e => { e.preventDefault(); e.stopPropagation(); d.removeEventListener("pointerup", go); document.removeEventListener("keydown", key); $(".next", d).style.visibility = "hidden"; sfx("select"); res(); };
+    const go = e => { e.preventDefault(); e.stopPropagation(); swallowClicks(); d.removeEventListener("pointerup", go); document.removeEventListener("keydown", key); $(".next", d).style.visibility = "hidden"; sfx("select"); res(); };
     const key = e => { if (["Enter", " ", "z", "x"].includes(e.key)) go(e); };
     setTimeout(() => { d.addEventListener("pointerup", go); document.addEventListener("keydown", key); }, 120);
   });
+}
+// After a tap closes a line, eat the click that tap makes, so it can't press a button hidden under the dialog.
+function swallowClicks(ms = 400) {
+  const h = e => { if (e.target.closest && e.target.closest("#dialog .choice")) return; e.stopPropagation(); e.preventDefault(); };
+  document.addEventListener("click", h, true); setTimeout(() => document.removeEventListener("click", h, true), ms);
 }
 async function say(who, text) {
   talkStart();
@@ -1911,11 +2092,13 @@ function confirmBox(text, yes = "Yes", no = "No") {
 function cardEl(c, opts = {}) {
   const sp = SPECIES[c.s], size = opts.size || "md";
   const name = c.fake ? fakeName(sp.name) : sp.name;
-  const gems = RARITY[sp.rarity].gems;
+  const gems = c.fake ? (RARITY[sp.rarity].gems > 1 ? RARITY[sp.rarity].gems - 1 : 2) : RARITY[sp.rarity].gems; // a fake's gems don't match its rarity
   const cls = ["card", "sz-" + size, "t-" + sp.type, "r-" + sp.rarity, "f-" + c.f, "c-" + c.c];
   if (opts.silhouette) cls.push("sil");
   if (opts.selected) cls.push("sel");
   if (opts.dim) cls.push("dim");
+  if (opts.liked) cls.push("liked");
+  if (c.fake && !opts.silhouette) cls.push("fk");
   const art = el("img", { class: "art", src: driftlingURL(sp.id, opts.silhouette), alt: opts.silhouette ? "Not found yet" : sp.name, draggable: "false" });
   const e = el("div", { class: cls.join(" "), style: { "--frame": TYPES[sp.type].frame, "--light": TYPES[sp.type].light } },
     el("div", { class: "ctop" }, el("span", { class: "cname" }, opts.silhouette ? "???" : name), el("span", { class: "cpow" }, opts.silhouette ? "?" : sp.power)),
@@ -1930,6 +2113,8 @@ function cardEl(c, opts = {}) {
     el("div", { class: "cfoil" }),
     opts.num ? el("div", { class: "cnum" }, opts.num) : null,
     opts.badge ? el("div", { class: "cbadge" }, opts.badge) : null,
+    opts.liked ? el("div", { class: "cliked" }, "💚") : null,
+    c.dc ? el("div", { class: "cdisp" }, "🏠") : null,
   );
   if (opts.onClick) { e.addEventListener("click", ev => { ev.stopPropagation(); sfx("flip"); opts.onClick(c, e); }); e.classList.add("tap"); }
   return e;
@@ -1959,6 +2144,7 @@ function renderHud() {
   $("#hud-day").textContent = `Day ${S.day} · ${TIMES[S.time]}`;
   $("#hud-place").textContent = ISLANDS[S.island].name;
   $("#hud-goal").textContent = questText();
+  checkRank();
 }
 
 // ===== 10_world.js =====
@@ -2216,7 +2402,7 @@ async function openTrade(npcId) {
     const empty = !o.mine.length && !o.theirs.length && !t.myShells && !t.theirShells;
     body.append(
       el("div", { class: "trade-top" },
-        el("div", { class: "who" }, pic, el("div", null, el("b", null, n.name), el("small", null, `${P.label} trader · ${ISLANDS[n.island].name} reputation ${S.rep[n.island]}`))),
+        el("div", { class: "who" }, pic, el("div", null, el("b", null, n.name), el("small", null, `${P.label} trader · ${ISLANDS[n.island].name} reputation ${S.rep[n.island]}`), tasteText(npcId) ? el("small", { class: "likes" }, tasteText(npcId)) : null)),
         ev.twins && !empty ? el("div", { class: "moods" }, ["pip", "wren"].map(k => el("div", { class: "mood m-" + ev.twins[k] }, el("span", { class: "face" }, MOOD_FACE[ev.twins[k]]), el("span", null, `${NPCS[k].name}: ${MOOD_WORD[ev.twins[k]]}`))))
           : el("div", { class: "mood m-" + (empty ? "none" : ev.mood) }, el("span", { class: "face" }, empty ? "😐" : MOOD_FACE[ev.mood]), el("span", null, empty ? "Waiting for an offer" : MOOD_WORD[ev.mood]))),
       el("div", { class: "trade-sides" },
@@ -2228,8 +2414,9 @@ async function openTrade(npcId) {
           st.stock.length ? el("div", { class: "strip" }, st.stock.map(c => cardEl(c, { size: "sm", selected: t.theirs.has(c.u), badge: badgeFor(c), onClick: c2 => { t.theirs.has(c2.u) ? t.theirs.delete(c2.u) : t.theirs.add(c2.u); draw(); } })))
             : el("p", { class: "muted" }, n.personality === "hoarder" ? "Pomfrey never sells. He only buys Rare cards and better, with Shells." : "No cards to trade right now.")),
         el("div", { class: "pick-col" }, el("h3", null, "Your cards"),
-          el("div", { class: "strip" }, sortCards(S.cards).filter(c => !c.lk).map(c => cardEl(c, { size: "sm", selected: t.mine.has(c.u), badge: badgeFor(c), onClick: c2 => { t.mine.has(c2.u) ? t.mine.delete(c2.u) : t.mine.add(c2.u); draw(); } }))),
-          S.cards.some(c => c.lk) ? el("p", { class: "muted small" }, "🔒 Story cards (like your starter) can't be traded.") : null)),
+          el("div", { class: "strip" }, sortCards(S.cards).filter(c => !c.lk && !c.dc).map(c => cardEl(c, { size: "sm", selected: t.mine.has(c.u), liked: likesCard(npcId, c), badge: badgeFor(c), onClick: c2 => { t.mine.has(c2.u) ? t.mine.delete(c2.u) : t.mine.add(c2.u); draw(); } }))),
+          S.cards.some(c => c.lk) ? el("p", { class: "muted small" }, "🔒 Story cards (like your starter) can't be traded." + (S.cards.some(c => c.dc) ? " Cards in your display case stay home." : "")) : null,
+          tasteText(npcId) ? el("p", { class: "muted small" }, `💚 = a card ${n.twin ? "Pip or Wren" : n.name} likes.`) : null)),
       el("div", { class: "trade-btns" },
         el("button", { class: "btn", onclick: () => doAppraise() }, `🦜 Ledger prices it all (${APPRAISE_COST}\u00a0◈)`),
         S.flags.magnifier ? el("button", { class: "btn", onclick: () => doMagnify() }, "🔍 Magnifier") : null,
@@ -2256,6 +2443,7 @@ async function openTrade(npcId) {
     sfx("coin");
     const fake = all.find(c => c.fake);
     pa.el.style.visibility = "hidden";
+    for (const c of all) if (c.fake) noteFakeSpotted(c);
     if (fake) await say("ledger", `SQUAWK! That ${fakeName(SPECIES[fake.s].name)} is a FAKE! Look at the name! It's spelled wrong! Worth zero Shells!`);
     else await say("ledger", pick(Math.random, ["Squawk! I've written the prices on the cards. You're welcome.", "Appraised! Prices are on the cards. Crackers would also be accepted as payment.", "Done! Every card has its price tag now. Today's prices, mind you. They change."]));
     pa.el.style.visibility = "";
@@ -2268,8 +2456,8 @@ async function openTrade(npcId) {
     if (!look.length) await say("narrator", "There's nothing to look at.");
     else {
       const fakes = look.filter(c => c.fake);
-      for (const c of fakes) S.known[c.u] = { price: 0, day: S.day, island: S.island, fake: true };
-      if (fakes.length) await say("narrator", `You look closely with the magnifier... "${fakeName(SPECIES[fakes[0].s].name)}"? The name is spelled wrong and the ink is smudgy. That card is a FAKE!`);
+      for (const c of fakes) { S.known[c.u] = { price: 0, day: S.day, island: S.island, fake: true }; noteFakeSpotted(c); }
+      if (fakes.length) await say("narrator", `You look closely with the magnifier... "${fakeName(SPECIES[fakes[0].s].name)}"? The name is spelled wrong, the gems don't match, and the picture is crooked. That card is a FAKE!`);
       else await say("narrator", `You check ${o.theirs.length ? "the cards you picked" : "all of their cards"} with the magnifier. The ink is crisp and the names are spelled right. They look genuine.`);
     }
     pa.el.style.visibility = ""; draw(); saveGame();
@@ -2318,29 +2506,66 @@ async function openTrade(npcId) {
     t.counters++;
     const short = Math.max(1, Math.ceil((ev.need * ev.give - ev.get) / ev.sv * P.inflate));
     // selling for Shells: the buyer offers to pay less instead of asking you to pay
-    if (t.theirShells > 0 && !t.myShells) {
-      const pay = Math.max(0, t.theirShells - Math.ceil(short * ev.sv));
-      const i = await ask(npcId, pay > 0 ? `I can't pay ${t.theirShells}. How about ${pay} Shells instead?` : "Honestly? I can't pay anything for that.", pay > 0 ? [`OK, ${pay} ◈ is fine`, "Let me change my offer", "Never mind"] : ["OK", "Never mind"]);
+    if (t.theirShells > 0 && !t.myShells && !o0().theirs.length) {
+      const pay = Math.min(Math.max(0, t.theirShells - Math.ceil(short * ev.sv)), maxPayThatWorks());
+      const i = await ask(npcId, pay > 0 ? `I can't pay ${t.theirShells}. How about ${plural(pay, "Shell")} instead?` : "Honestly? I can't pay anything for that.", pay > 0 ? [`OK, ${pay} ◈ is fine`, "Let me change my offer", "Never mind"] : ["OK", "Never mind"]);
       if (pay > 0 && i === 0) { t.theirShells = pay; const ev2 = evalFor(t); return ev2.ratio >= ev2.need ? acceptFlow(ev2, true) : say(npcId, "Hmm, still not quite."); }
       if ((pay > 0 && i === 2) || (pay <= 0 && i === 1)) pa.close();
       return;
     }
+    // A real counteroffer: up to three ways to close the gap. Each one is checked so it really works.
+    const offers = counterOptions(t, short);
+    if (!offers.length) { await say(npcId, ev.ratio > ev.need * 0.85 ? "So close! Add a little something more." : "Not enough. You'll need to add something good."); return; }
+    const line = offers.length === 1 ? `Almost! ${cap(offers[0].ask)} and it's a deal.` : `Almost! ${cap(offers.map(x => x.ask).join(", or "))}. Your pick.`;
+    const i = await ask(npcId, line, [...offers.map(x => x.label), "Let me change my offer", "Never mind"]);
+    if (i < offers.length) { offers[i].apply(); const ev2 = evalFor(t); return ev2.ratio >= ev2.need ? acceptFlow(ev2) : say(npcId, "Hmm, still not quite."); }
+    if (i === offers.length + 1) pa.close();
+  }
+  const o0 = () => offerOf(t);
+  // the most Shells they'd really pay for this offer (0 if nothing works)
+  function maxPayThatWorks() {
+    const keep = t.theirShells;
+    for (let p = keep; p > 0; p--) { t.theirShells = p; const e = evalFor(t); if (e.ratio >= e.need) { t.theirShells = keep; return p; } }
+    t.theirShells = keep; return 0;
+  }
+  // Ways to fix an offer that's a little short, cheapest-for-you first.
+  function counterOptions(t, short) {
+    const out = [], works = () => { const e = evalFor(t); return e.ratio >= e.need; };
+    // 1) more Shells
     if (S.shells - t.myShells >= short) {
-      const i = await ask(npcId, pick(Math.random, [`Almost. Add ${short} Shells and it's a deal.`, `Hmm. Throw in ${short} more Shells?`, `Close! ${short} more Shells and we shake on it.`]), [`OK, add ${short} ◈`, "Let me change my offer", "Never mind"]);
-      if (i === 0) { t.myShells += short; const ev2 = evalFor(t); return ev2.ratio >= ev2.need ? acceptFlow(ev2) : say(npcId, "Hmm, still not quite."); }
-      if (i === 2) pa.close();
-    } else {
-      await say(npcId, ev.ratio > ev.need * 0.85 ? "So close! Add a little something more." : "Not enough. You'll need to add something good.");
+      let add = short; t.myShells += add; let tries = 0;
+      while (!works() && tries++ < 6 && S.shells - (t.myShells - add) >= add + Math.ceil(short * 0.25)) { const bump = Math.max(1, Math.ceil(short * 0.25)); t.myShells += bump; add += bump; }
+      const ok = works(); t.myShells -= add;
+      if (ok) out.push({ ask: `add ${plural(add, "Shell")}`, label: `OK, add ${add} ◈`, apply: () => { t.myShells += add; } });
     }
+    // 2) one of your cards they'd like
+    const cands = S.cards.filter(c => !t.mine.has(c.u) && !c.lk && !c.dc && !c.fake);
+    let best = null;
+    for (const c of cands) { t.mine.add(c.u); if (works()) { const v = cardValue(c) - (likesCard(npcId, c) ? 3 : 0); if (!best || v < best.v) best = { c, v }; } t.mine.delete(c.u); }
+    if (best) { const c = best.c; out.push({ ask: `throw in your ${cardName(c)}${c.f !== "normal" ? " (" + FINISH[c.f].name + ")" : ""}`, label: `OK, add my ${cardName(c)}`, apply: () => { t.mine.add(c.u); } }); }
+    // 3) ask for one card less
+    const o = offerOf(t);
+    if (o.theirs.length > 1) {
+      let drop = null;
+      for (const c of o.theirs) { if (c.u === S.flags.zephUid && n.twin) continue; t.theirs.delete(c.u); if (works() && (!drop || cardValue(c) < cardValue(drop))) drop = c; t.theirs.add(c.u); }
+      if (drop) out.push({ ask: `let me keep my ${cardName(drop)}`, label: `OK, leave out the ${cardName(drop)}`, apply: () => { t.theirs.delete(drop.u); } });
+    }
+    // 4) they pay you fewer Shells
+    if (t.theirShells > 0) {
+      let cut = 0; const step = Math.max(1, Math.ceil(short * 0.25));
+      while (cut < t.theirShells) { cut = Math.min(t.theirShells, cut + step); t.theirShells -= cut; const ok = works(); t.theirShells += cut; if (ok) break; if (cut >= t.theirShells) { cut = -1; break; } }
+      if (cut > 0) out.push({ ask: `I pay you ${plural(t.theirShells - cut, "Shell")} instead of ${t.theirShells}`, label: `OK, ${t.theirShells - cut} ◈ is fine`, apply: () => { t.theirShells -= cut; } });
+    }
+    return out.slice(0, 3);
   }
   async function haggle(ev) {
     t.counters++;
     const bump = t.counters === 1 ? 1.25 : 1.1;
     const short = Math.max(2, Math.ceil(Math.max(ev.need * ev.give * bump - ev.get, ev.give * 0.08) / ev.sv));
     if (t.theirShells > 0 && !t.myShells) {
-      const pay = t.counters === 1 ? Math.max(0, t.theirShells - short) : Math.max(0, roundHalf((t.theirShells + (t.hagglePay ?? t.theirShells)) / 2));
+      const pay = Math.min(t.counters === 1 ? Math.max(0, t.theirShells - short) : Math.max(0, roundHalf((t.theirShells + (t.hagglePay ?? t.theirShells)) / 2)), maxPayThatWorks());
       if (t.counters === 1) t.hagglePay = pay;
-      const j = await ask(npcId, t.counters === 1 ? `Ha! ${t.theirShells}? I'll give you ${pay}.` : `OK, OK. Meet me in the middle. ${pay} Shells?`, [`OK, ${pay} ◈`, "Stick to my offer", "Never mind"]);
+      const j = await ask(npcId, t.counters === 1 ? `Ha! ${t.theirShells}? I'll give you ${pay}.` : `OK, OK. Meet me in the middle. ${plural(pay, "Shell")}?`, [`OK, ${pay} ◈`, "Stick to my offer", "Never mind"]);
       if (j === 0) { t.theirShells = pay; const ev2 = evalFor(t); return ev2.ratio >= ev2.need ? acceptFlow(ev2, true) : say(npcId, "Hmm, still not quite."); }
       if (j === 2) { pa.close(); return; }
       if (t.counters < 2) return haggle(ev);
@@ -2400,14 +2625,14 @@ async function finishTrade(t, ev, gift) {
 
 // ===== 12_places.js =====
 // ---------- shops, board, inns, ferry, jobs, hidden finds ----------
-const SHOPKEEPER = { driftwood: "pearl", cinderpeak: "rosa", galehollow: "ollie" };
-const COUNTERKEEPER = { driftwood: "wes", cinderpeak: "flint", galehollow: "breeze" };
+const SHOPKEEPER = { driftwood: "pearl", cinderpeak: "rosa", galehollow: "ollie", mossmere: "clover" };
+const COUNTERKEEPER = { driftwood: "wes", cinderpeak: "flint", galehollow: "breeze", mossmere: "sorrel" };
 function shopState(isl) {
   let s = S.shops[isl];
   if (!s || s.day !== S.day) {
     const r = rngFor(S.market.seed, "counter", isl, S.day);
     const singles = [];
-    for (let i = 0; i < 4; i++) singles.push(rollCard(r, weighted(r, [[isl, 5], ...ISLAND_ORDER.filter(k => k !== isl).map(k => [k, 2])]), { C: 30, U: 40, R: 22, E: 7, M: 1 }, { normalOnly: r() < 0.75 }));
+    for (let i = 0; i < 4; i++) singles.push(rollCard(r, weighted(r, [[isl, 5], ...openIslands().filter(k => k !== isl).map(k => [k, 2])]), { C: 30, U: 40, R: 22, E: 7, M: 1 }, { normalOnly: r() < 0.75 }));
     s = S.shops[isl] = { day: S.day, singles, packs: 0 };
   }
   return s;
@@ -2517,7 +2742,7 @@ function openCounter(isl) {
         }) : el("p", { class: "muted" }, "Sold out today.")));
     } else {
       body.append(el("p", { class: "muted" }, "The counter buys any card at half of today's price here. Quick, but not the best deal. Traders usually pay more."),
-        el("div", { class: "strip wrap" }, sortCards(S.cards.filter(c => !c.lk)).map(c => {
+        el("div", { class: "strip wrap" }, sortCards(S.cards.filter(c => !c.lk && !c.dc)).map(c => {
           const price = c.fake ? 0 : Math.max(1, roundHalf(cardValue(c) * 0.5));
           return el("div", { class: "forsale" }, cardEl(c, { size: "sm", onClick: () => cardDetail(c) }),
             el("button", { class: "btn tiny", onclick: async () => {
@@ -2539,12 +2764,14 @@ function openBoard(isl) {
     const sp = SPECIES[m.id], price = speciesValue(m.id, isl);
     S.knownSp[m.id] = { price, day: S.day, island: isl };
     const pct = roundHalf(m.ch * 100);
-    return el("div", { class: "mover" }, el("img", { src: driftlingURL(m.id) }), el("span", null, sp.name), el("b", { class: up ? "up" : "down" }, `${pct > 0 ? "▲ +" : pct < 0 ? "▼ " : ""}${pct}%`), el("span", { class: "muted" }, `${price} ◈`));
+    return el("div", { class: "mover" }, el("img", { src: driftlingURL(m.id) }), el("span", null, sp.name), el("b", { class: pct > 0 ? "up" : pct < 0 ? "down" : "muted" }, `${pct > 0 ? "▲ +" : pct < 0 ? "▼ " : ""}${pct}%`), el("span", { class: "muted" }, `${price} ◈`));
   };
   const local = speciesOf(isl).filter(s => s.rarity === "C")[0];
   const body = el("div", { class: "board" },
     el("h3", null, "📰 Island News"),
     S.market.events.length ? el("ul", null, S.market.events.map(e => el("li", null, e.text, el("small", { class: "muted" }, ` (until day ${e.until})`)))) : el("p", { class: "muted" }, "A quiet day. No big news."),
+    el("h3", null, "🗣️ Rumor for tomorrow"),
+    S.market.rumor ? el("p", { class: "rumor" }, S.market.rumor.rumor, el("small", { class: "muted" }, " Rumors come true most of the time, but not always.")) : el("p", { class: "muted" }, "No rumors today. Tomorrow could still surprise you."),
     el("p", { class: "tip" }, `${ISLANDS[isl].name} cards are about 20% cheaper here than on other islands. Cards from other islands cost about 20% more here.`),
     el("div", { class: "movers" },
       el("div", null, el("h3", null, "Going up since yesterday"), mv.up.map(m => row(m, true))),
@@ -2555,9 +2782,8 @@ function openBoard(isl) {
 }
 
 // ---------- sleeping ----------
-async function sleepHere(where) {
-  const i = await ask("narrator", `${where}. Go to sleep and start a new day? Prices will change overnight.`, ["Sleep", "Not yet"]);
-  if (i !== 0) return;
+async function sleepHere(where, sure) {
+  if (!sure) { const i = await ask("narrator", `${where}. Go to sleep and start a new day? Prices will change overnight.`, ["Sleep", "Not yet"]); if (i !== 0) return; }
   await fadeOut();
   newDay();
   await fadeIn();
@@ -2567,13 +2793,20 @@ function newDay() {
   S.day++; S.time = 0;
   newDayMarket(); refreshNpcs();
   storyNewDay();
+  dailyRequests();
+  S.flags.caseMsg = caseMorning();
   saveGame(true); renderHud();
 }
 async function morningNews() {
   const ev = S.market.events.filter(e => e.started === S.day);
-  if (ev.length) await say("ledger", `Squawk! Day ${S.day}! News: ${ev[0].text}`);
-  else await say("ledger", `Squawk! Good morning! Day ${S.day}. Prices moved a little overnight. Check the Exchange Board!`);
+  const rr = S.market.rumorResult;
+  if (ev.length) await say("ledger", `Squawk! Day ${S.day}! ${rr === "true" && ev[0].fromRumor ? "The rumor was RIGHT! " : ""}News: ${ev[0].text}`);
+  else await say("ledger", `Squawk! Good morning! Day ${S.day}. Prices moved a little overnight.${rr === "false" ? " And yesterday's rumor was wrong! Rumors usually come true, but not always." : " Check the Exchange Board!"}`);
+  if (S.market.rumor) await say("ledger", `I heard a rumor for tomorrow: ${S.market.rumor.rumor}`);
+  if (S.flags.caseMsg) { await say("ledger", S.flags.caseMsg); S.flags.caseMsg = null; renderHud(); }
   await storyMorning();
+  const fresh = (S.requests || []).filter(q => q.day === S.day);
+  if (fresh.length) { const names = fresh.map(q => NPCS[q.npc].name + " on " + ISLANDS[q.island].name); await say("ledger", `Squawk! ${names.length > 1 ? names.slice(0, -1).join(", ") + " and " + names.at(-1) : names[0]} ${fresh.length > 1 ? "each need" : "needs"} a card. Look for the ! over their head.`); }
 }
 function fadeOut() { return new Promise(r => { $("#fade").classList.add("on"); setTimeout(r, 450); }); }
 function fadeIn() { return new Promise(r => { $("#fade").classList.remove("on"); setTimeout(r, 450); }); }
@@ -2607,6 +2840,7 @@ const JOBS = {
   nets:     { title: "Sort Fisher Dale's nets", item: "🐟", bad: "🦀", tip: "Tap the fish! Leave the crabs alone, they pinch." },
   towels:   { title: "Run towels for Yumi", item: "🧺", bad: "♨️", tip: "Tap the towel baskets! Don't tap the steam, it's hot." },
   windmill: { title: "Sweep Old Hank's windmill", item: "🧹", bad: "🐝", tip: "Tap the dust bunnies! Don't bother the bees." },
+  weeds:    { title: "Pull weeds for Fern", item: "🌱", bad: "🌷", tip: "Tap the weeds! Don't pull the tulips." },
 };
 function jobDoneToday(id) { return S.jobs[id] === S.day; }
 async function playJob(npcId) {
@@ -2614,27 +2848,32 @@ async function playJob(npcId) {
   if (jobDoneToday(npcId)) { await say(npcId, "That's all the work I have today. Come back tomorrow!"); return; }
   const i = await ask(npcId, `${fmt(NPCS[npcId].chat[0])} Want to help? It takes a little while.`, ["Sure!", "Not now"]);
   if (i !== 0) return;
-  const earned = await jobGame(job);
+  const lv = jobLevel(npcId);
+  const earned = await jobGame(job, lv);
+  S.jobsDone = S.jobsDone || {}; S.jobsDone[npcId] = (S.jobsDone[npcId] || 0) + 1;
   S.jobs[npcId] = S.day; S.shells += earned; advanceTime(1); repChange(NPCS[npcId].island, 1);
   renderHud(); saveGame(); sfx("coin");
   await say(npcId, `Great work! Here's ${earned} Shells.`);
+  const lv2 = jobLevel(npcId);
+  if (lv2 > lv) await say(npcId, `You're getting really good at this! From now on it's a harder job, but I'll pay up to ${jobCap(lv2)} Shells.`);
 }
-function jobGame(job) {
+function jobGame(job, lv = 0) {
   return new Promise(res => {
     let score = 0, misses = 0, timeLeft = 20, running = false;
+    const per = 6 + 2 * lv, cap = jobCap(lv), floor = 15 + 5 * lv, badOdds = 0.22 + 0.04 * lv;
     const grid = el("div", { class: "jobgrid" });
     const holes = Array.from({ length: 12 }, () => el("button", { class: "hole" }));
     holes.forEach(h => grid.append(h));
     const info = el("div", { class: "jobinfo" }, el("span", { class: "jt" }, "⏱ 20"), el("span", { class: "js" }, "0 ◈"));
     const start = el("button", { class: "btn primary big" }, "Start!");
-    const body = el("div", { class: "job" }, el("p", { class: "center" }, job.tip + " (Pays up to 120 ◈.)"), info, grid, el("div", { class: "center" }, start));
+    const body = el("div", { class: "job" }, el("p", { class: "center" }, job.tip + ` (Pays up to ${cap} ◈.)`), el("p", { class: "center muted small" }, lv ? `Job level ${lv + 1} of 4: faster, trickier, better pay.` : "Job level 1 of 4. Do this job 3 times to level up."), info, grid, el("div", { class: "center" }, start));
     const pa = openPanel(job.title, body, { cls: "wide", noClose: true });
     const timers = [];
     holes.forEach(h => h.addEventListener("pointerdown", e => {
       e.preventDefault();
       if (!running || !h.dataset.k) return;
-      if (h.dataset.k === "good") { score += 6; sfx("coin"); h.classList.add("hit"); }
-      else { misses++; score = Math.max(0, score - 6); sfx("error"); h.classList.add("ouch"); }
+      if (h.dataset.k === "good") { score += per; sfx("coin"); h.classList.add("hit"); }
+      else { misses++; score = Math.max(0, score - per); sfx("error"); h.classList.add("ouch"); }
       h.dataset.k = ""; h.textContent = "";
       setTimeout(() => h.classList.remove("hit", "ouch"), 200);
       $(".js", info).textContent = `${score} ◈`;
@@ -2643,11 +2882,11 @@ function jobGame(job) {
       if (!running) return;
       const free = holes.filter(h => !h.dataset.k);
       if (free.length) {
-        const h = pick(Math.random, free), bad = Math.random() < 0.22;
+        const h = pick(Math.random, free), bad = Math.random() < badOdds;
         h.dataset.k = bad ? "bad" : "good"; h.textContent = bad ? job.bad : job.item;
-        timers.push(setTimeout(() => { if (h.dataset.k) { h.dataset.k = ""; h.textContent = ""; } }, 900 + Math.random() * 500));
+        timers.push(setTimeout(() => { if (h.dataset.k) { h.dataset.k = ""; h.textContent = ""; } }, 900 - 60 * lv + Math.random() * 500));
       }
-      timers.push(setTimeout(pop, 330 + Math.random() * 260));
+      timers.push(setTimeout(pop, 330 - 25 * lv + Math.random() * 260));
     };
     start.addEventListener("click", () => {
       start.disabled = true; running = true; pop();
@@ -2655,7 +2894,7 @@ function jobGame(job) {
         timeLeft--; $(".jt", info).textContent = "⏱ " + timeLeft;
         if (timeLeft <= 0) {
           clearInterval(tick); running = false; timers.forEach(clearTimeout);
-          const pay = clamp(score, 35, 120);
+          const pay = clamp(score, floor, cap);
           start.textContent = `Done! Collect ${pay} ◈`; start.disabled = false;
           start.onclick = () => { pa.close(); res(pay); };
         }
@@ -2697,20 +2936,21 @@ const PAGE_REWARD = {
   driftwood: { sid: "D15", f: "holo", sh: 180 },
   cinderpeak: { sid: "C15", f: "holo", sh: 240 },
   galehollow: { sid: "G16", f: "holo", sh: 300 },
+  mossmere: { sid: "M16", f: "holo", sh: 360 },
 };
 let BINDER_TAB = "driftwood";
 function openBinder() {
   const body = el("div", { class: "binder" });
   const pa = openPanel("Binder", body, { cls: "wide" });
-  const tabs = ["heirloom", "driftwood", "cinderpeak", "galehollow", "future", "all"];
-  const label = { heirloom: "Heirloom", driftwood: "Driftwood", cinderpeak: "Cinderpeak", galehollow: "Galehollow", future: "More islands", all: "All my cards" };
+  const tabs = ["heirloom", "driftwood", "cinderpeak", "galehollow", "mossmere", "future", "all"];
+  const label = { heirloom: "Heirloom", driftwood: "Driftwood", cinderpeak: "Cinderpeak", galehollow: "Galehollow", mossmere: "Mossmere", future: "More islands", all: "All my cards" };
   const draw = () => {
     body.innerHTML = "";
     body.append(el("div", { class: "tabs scroll" }, tabs.map(k => el("button", { class: "tab" + (BINDER_TAB === k ? " on" : ""), onclick: () => { BINDER_TAB = k; draw(); } },
       label[k] + (SETS[k] && k !== "heirloom" ? ` ${ownedCount(k)}/20` : "")))));
     if (BINDER_TAB === "all") return drawAll();
     if (BINDER_TAB === "future") {
-      body.append(el("p", { class: "muted" }, "Five more islands are out there. Their ferry routes open in later chapters."),
+      body.append(el("p", { class: "muted" }, "Four more islands are out there. Their ferry routes open in later chapters."),
         el("div", { class: "future" }, FUTURE_ISLANDS.map(([nm, ty]) => el("div", { class: "fut", style: { "--frame": TYPES[ty].frame } }, el("div", { class: "big" }, TYPES[ty].icon), el("b", null, nm), el("small", null, "20 cards · Coming in a later chapter")))));
       return;
     }
@@ -2733,7 +2973,8 @@ function openBinder() {
   const drawAll = () => {
     const cards = sortCards(S.cards);
     body.append(el("p", { class: "muted" }, `${cards.length} cards. Tap one to look closer.`),
-      el("div", { class: "strip wrap" }, cards.map(c => cardEl(c, { size: "sm", badge: c.lk ? "🔒" : null, onClick: () => cardDetail(c) }))));
+      el("div", { class: "strip wrap" }, cards.map(c => cardEl(c, { size: "sm", badge: c.lk ? "🔒" : null, onClick: () => cardDetail(c) }))),
+      S.cards.some(c => c.dc) ? el("p", { class: "muted small" }, "🏠 = in Grandpa's display case.") : "");
   };
   draw();
   return pa;
@@ -2764,7 +3005,8 @@ function cardDetail(c) {
       el("p", null, `Power ${sp.power}. ${b.why}.`),
       sp.ability ? el("p", null, el("b", null, ABILITIES[sp.ability].name + ": "), ABILITIES[sp.ability].text) : el("p", { class: "muted" }, "No ability."),
       el("p", { class: "price" }, priceLine(c)),
-      c.lk ? el("p", { class: "muted" }, "🔒 This is a story card. It can't be traded or sold.") : null,
+      c.lk ? el("p", { class: "muted" }, "🔒 This is a story card. It can't be traded or sold.") : "",
+      c.dc ? el("p", { class: "muted" }, "🏠 This card is in Grandpa's display case.") : "",
       mine ? el("div", { class: "row wrap" },
         el("button", { class: "btn", onclick: async () => {
           if (S.shells < 5) { sfx("error"); toast("Not enough Shells."); return; }
@@ -2773,10 +3015,10 @@ function cardDetail(c) {
         S.flags.magnifier ? el("button", { class: "btn", onclick: async () => {
           sfx("select");
           pa.el.style.visibility = "hidden";
-          if (c.fake) { S.known[c.u] = { price: 0, day: S.day, island: S.island, fake: true }; await say("narrator", `You hold the magnifier up close... The name is spelled "${fakeName(sp.name)}". The ink is smudgy. This card is a FAKE.`); }
+          if (c.fake) { S.known[c.u] = { price: 0, day: S.day, island: S.island, fake: true }; noteFakeSpotted(c); await say("narrator", `You hold the magnifier up close... The name is spelled "${fakeName(sp.name)}". The gems don't match a ${RARITY[sp.rarity].name} card, and the picture is crooked. This card is a FAKE.`); }
           else await say("narrator", "You hold the magnifier up close... The ink is crisp, the name is spelled right, the gems match. It's genuine!");
           pa.el.style.visibility = ""; saveGame(); draw();
-        } }, "🔍 Magnifier") : null) : null);
+        } }, "🔍 Magnifier") : null) : "");
   };
   draw();
 }
@@ -2791,6 +3033,10 @@ function checkPageRewards() {
       sayWhenFree("ledger", `SQUAWK! You finished the whole ${SETS[set].name} page! Reward: a Holo ${SPECIES[R.sid].name} and ${R.sh} Shells! The page has a gold border now!`);
     }
   }
+  if (!S.rewards.trophy && ISLAND_ORDER.every(k => S.rewards[k])) {
+    S.rewards.trophy = 1; S.shells += 500; S.cards.push(newCard("M20", { f: "holo" })); renderHud(); sfx("win");
+    sayWhenFree("ledger", "SQUAAAWK! Every page is complete! You won the GRAND BINDER TROPHY! Reward: a Holo Verdantine and 500 Shells! The trophy is in your Journal, under Stamps.");
+  }
   saveGame();
 }
 
@@ -2801,11 +3047,22 @@ function openJournal() {
   openPanel("Journal", body, { cls: "wide" });
   const draw = () => {
     body.innerHTML = "";
-    body.append(el("div", { class: "tabs" }, [["goal", "Goal"], ["trades", "Trades"], ["letters", "Letters"], ["stamps", "Stamps"]].map(([k, l]) => el("button", { class: "tab" + (JOURNAL_TAB === k ? " on" : ""), onclick: () => { JOURNAL_TAB = k; draw(); } }, l))));
+    body.append(el("div", { class: "tabs scroll" }, [["goal", "Goal"], ["requests", "Requests" + ((S.requests || []).length ? ` (${S.requests.length})` : "")], ["trades", "Trades"], ["letters", "Letters"], ["stamps", "Stamps"]].map(([k, l]) => el("button", { class: "tab" + (JOURNAL_TAB === k ? " on" : ""), onclick: () => { JOURNAL_TAB = k; draw(); } }, l))));
     if (JOURNAL_TAB === "goal") {
-      body.append(el("div", { class: "goal" }, el("h3", null, "What to do next"), el("p", null, questText()), el("p", { class: "muted" }, questHint())),
+      body.append(el("div", { class: "goal" }, el("h3", null, "What to do next"), el("p", null, questText()), el("p", { class: "muted" }, questHint())), rankBlock(),
         el("div", { class: "reps" }, el("h3", null, "Reputation"), ...ISLAND_ORDER.filter(k => S.unlocked.includes(k)).map(k => el("div", { class: "rep" }, el("span", null, ISLANDS[k].name), el("div", { class: "bar" }, el("i", { style: { width: S.rep[k] + "%" } })), el("small", null, repWord(S.rep[k]))))),
         el("p", { class: "muted small" }, `Trades made: ${S.stats.trades || 0} · Packs opened: ${S.stats.packs || 0} · Tide Clash wins: ${S.stats.wins || 0}`));
+    }
+    if (JOURNAL_TAB === "requests") {
+      const qs = S.requests || [];
+      body.append(el("p", { class: "muted" }, "Townsfolk with a ! over their head need a card. Bring it to them for a reward and a better reputation. New requests show up in the morning."));
+      if (!qs.length) body.append(el("p", null, "Nobody needs anything right now. Check again tomorrow!"));
+      for (const q of qs) {
+        const have = S.cards.some(c => c.s === q.sid && !c.lk && !c.dc && (q.cond !== "mint" || c.c === "mint"));
+        body.append(el("div", { class: "tl req" }, cardEl({ s: q.sid, f: "normal", c: "mint" }, { size: "xs", silhouette: !owned(q.sid) }),
+          el("div", null, el("b", null, `${NPCS[q.npc].name} on ${ISLANDS[q.island].name}`), el("div", { class: "small" }, `Wants ${reqDesc(q)}. Reward: ${reqReward(q)}.`),
+            el("div", { class: "small muted" }, `Until the end of day ${q.until}.${have ? " ✅ You have one!" : ""}`))));
+      }
     }
     if (JOURNAL_TAB === "trades") {
       if (!S.journal.length) body.append(el("p", { class: "muted" }, "No trades yet. Every deal you make shows up here, with what it was really worth."));
@@ -2828,7 +3085,8 @@ function openJournal() {
       const names = ["Driftwood", "Cinderpeak", "Galehollow", "Mossmere", "Voltspire", "Ironreach", "Duskmarsh", "Lumen Atoll"];
       const types = ["tide", "ember", "gale", "bloom", "spark", "stone", "shade", "glow"];
       body.append(el("p", null, "Earn a Charter Stamp from each island's Trade Master. Eight stamps reopen the Grand Exchange."),
-        el("div", { class: "stamps" }, names.map((nm, i) => el("div", { class: "stamp" + (S.stamps.includes(types[i]) ? " got" : ""), style: { "--frame": TYPES[types[i]].frame } }, el("div", { class: "big" }, S.stamps.includes(types[i]) ? TYPES[types[i]].icon : "?"), el("small", null, nm)))));
+        el("div", { class: "stamps" }, names.map((nm, i) => el("div", { class: "stamp" + (S.stamps.includes(types[i]) ? " got" : ""), style: { "--frame": TYPES[types[i]].frame } }, el("div", { class: "big" }, S.stamps.includes(types[i]) ? TYPES[types[i]].icon : "?"), el("small", null, nm)))),
+        el("div", { class: "trophy" + (S.rewards.trophy ? " got" : "") }, el("div", { class: "big" }, S.rewards.trophy ? "🏆" : "?"), el("b", null, "Grand Binder Trophy"), el("small", null, S.rewards.trophy ? "You finished every island page!" : `Finish all four island pages (${ISLAND_ORDER.filter(k => S.rewards[k]).length}/4).`)));
     }
   };
   draw();
@@ -2838,7 +3096,7 @@ const repWord = r => r >= 80 ? "Beloved" : r >= 65 ? "Trusted" : r >= 45 ? "Know
 // ---------- deck ----------
 function deckCards() { return S.deck.map(u => S.cards.find(c => c.u === u)).filter(Boolean); }
 function autoDeck() {
-  const pool = S.cards.filter(c => !c.fake).slice().sort((a, b) => SPECIES[b.s].power - SPECIES[a.s].power + (SPECIES[b.s].ability ? 0.5 : 0) - (SPECIES[a.s].ability ? 0.5 : 0));
+  const pool = S.cards.filter(c => !c.fake && !c.dc).slice().sort((a, b) => SPECIES[b.s].power - SPECIES[a.s].power + (SPECIES[b.s].ability ? 0.5 : 0) - (SPECIES[a.s].ability ? 0.5 : 0));
   const pick8 = [], seen = {};
   for (const c of pool) { if (pick8.length >= 8) break; if ((seen[c.s] || 0) >= 2) continue; seen[c.s] = (seen[c.s] || 0) + 1; pick8.push(c.u); }
   for (const c of pool) { if (pick8.length >= 8) break; if (!pick8.includes(c.u)) pick8.push(c.u); }
@@ -2856,7 +3114,7 @@ function openDeck(onDone) {
       el("div", { class: "row" }, el("button", { class: "btn", onclick: () => { autoDeck(); draw(); } }, "Pick my best 8"),
         el("button", { class: "btn primary", disabled: d.length !== 8 ? true : null, onclick: () => pa.close() }, "Done")),
       el("p", { class: "muted small" }, "Unsleeved cards have a small chance to get scuffed each time they're played. Buy sleeves at any pack shop."),
-      el("div", { class: "strip wrap" }, sortCards(S.cards.filter(c => !S.deck.includes(c.u) && !c.fake)).map(c => cardEl(c, { size: "sm", dim: d.length >= 8, onClick: () => { if (S.deck.length < 8) { S.deck.push(c.u); draw(); } } }))));
+      el("div", { class: "strip wrap" }, sortCards(S.cards.filter(c => !S.deck.includes(c.u) && !c.fake && !c.dc)).map(c => cardEl(c, { size: "sm", dim: d.length >= 8, onClick: () => { if (S.deck.length < 8) { S.deck.push(c.u); draw(); } } }))));
   };
   draw();
 }
@@ -2886,6 +3144,8 @@ function clashPowers(board, weather) {
     if (ab === "tailwind" && mine.some(x => x !== p && x.sp.type === "gale")) add(p, 2);
     if (ab === "beacon") all.filter(a => a.side === side).forEach(a => add(a.p, 1));
     if (ab === "eruption") all.filter(a => a.side === side && a.p.sp.type === "ember").forEach(a => add(a.p, 1));
+    if (ab === "thicket") mine.filter(x => x !== p && x.sp.type === "bloom").forEach(x => add(x, 1));
+    if (ab === "overgrowth") all.filter(a => a.side === side && a.p.sp.type === "bloom").forEach(a => add(a.p, 1));
     if (ab === "galeforce") all.filter(a => a.side === side && a.p !== p && a.p.sp.type === "gale").forEach(a => add(a.p, 2));
   }
   for (const [k, v] of out) out.set(k, Math.max(0, v));
@@ -3107,7 +3367,18 @@ const LETTERS = {
     "Dear {name},",
     "Three stamps. I'm so proud of you I told a seagull about it.",
     "I'm close to the Lumen Atoll now. I think the locked page in my binder has something to do with it. I'll explain when I see you.",
-    "The ferry to Mossmere is closed for repairs, so the next islands will have to wait a little while. Keep trading fair, keep your cards sleeved, and keep an eye on that Cass kid. Something tells me there's more to that one.",
+    "The ferry to Mossmere is being fixed. Captain Bo says it'll be ready in a day or so. Keep trading fair, keep your cards sleeved, and keep an eye on that Cass kid. Something tells me there's more to that one.",
+    "Love, Grandpa"] },
+  l5: { title: "A muddy letter", text: [
+    "Dear {name},",
+    "Captain Bo wrote me. The Mossmere ferry is fixed! Hazel holds the stamp there. She's patient, she's sharp, and she remembers how you treat people.",
+    "On Mossmere, a good name is worth more than Shells. Help folks out. Trade fair. Don't lowball anybody, not even Bramble Bart. Especially not Bramble Bart.",
+    "Love, Grandpa"] },
+  l6: { title: "Grandpa's big news", text: [
+    "Dear {name},",
+    "FOUR stamps! Hazel says you beat her fair and square. She never loses. Well, she lost to me once. She'll deny it.",
+    "I found it. The Lumen Atoll. It's real, and it glows at night just like the stories say. I think the locked page in my binder is the key to getting there.",
+    "Keep filling your Binder. When every page is done, something tells me that lock will open. I'll see you at the end of summer.",
     "Love, Grandpa"] },
 };
 function addLetter(id) { if (!S.letters.includes(id)) S.letters.push(id); }
@@ -3126,11 +3397,15 @@ function questText() {
     dw_test: "Beat Old Marla at Tide Clash to earn the Driftwood stamp.",
     cp_go: "Take Captain Bo's ferry to Cinderpeak.",
     cp_meet: "Find Blaze Okafor at the Trade Hall on Cinderpeak.",
-    cp_test: `Pay Blaze back ${BLAZE_GOAL} Shells by the end of day ${S.flags.blazeDue}. (You have ${S.shells}.)`,
+    cp_test: `Pay Blaze back ${blazeGoal()} Shells by the end of day ${S.flags.blazeDue}. (You have ${S.shells}.)`,
     gh_go: "Take the ferry to Galehollow.",
     gh_meet: "Find the twins, Pip and Wren, on Galehollow.",
     gh_test: "Trade for Pip's Holo Zephyrin. The deal has to make BOTH twins happy.",
-    ch1_done: "Chapter 1 complete! Keep trading, finish your pages, and win the Kite Cup.",
+    ch1_done: "Chapter 1 complete! Keep trading, finish your pages, and win the Kite Cup. Sleep to see if the Mossmere ferry is fixed.",
+    mm_go: "The Mossmere ferry is fixed! Take Captain Bo's ferry to Mossmere.",
+    mm_meet: "Find Hazel at the Greenhouse on Mossmere.",
+    mm_test: `Get ${MM_GOAL} Mossmere cards (${ownedCount("mossmere")}/${MM_GOAL}) and Mossmere rep ${MM_REP} (now ${S.rep.mossmere ?? 50}). Then beat Hazel.`,
+    mm_done: "Chapter 2 complete! Finish all four Binder pages for the Grand Binder Trophy, and climb to Legend of the Isles.",
   }[q] || "";
 }
 function questHint() {
@@ -3147,16 +3422,22 @@ function questHint() {
     gh_meet: "The twins hang out in the middle of the island.",
     gh_test: "Pip loves Shade cards. Wren loves Glow cards. Watch BOTH mood faces in the trade screen.",
     ch1_done: "Coach Ramos runs the Kite Cup on Galehollow. Professor Ash still wants an Obsidurk.",
+    mm_go: "Captain Bo is at every dock.",
+    mm_meet: "The Greenhouse is the big green building at the top of Mossmere.",
+    mm_test: "Help townsfolk with a ! over their heads, and trade fair. That raises your reputation fast. Lowballs lower it.",
+    mm_done: "Look for missing cards in packs, at the Card Counters, and with townsfolk. Put spare good cards in Grandpa's display case for tips.",
   }[q] || "";
 }
 const DW_GOAL = 12;
 function questMarker(id) {
   const q = S.quest;
   if (id === "marla") return q === "meet_marla" || (q === "dw_collect" && ownedCount("driftwood") >= DW_GOAL) || q === "dw_test";
-  if (id === "blaze") return q === "cp_meet" || (q === "cp_test" && S.shells >= BLAZE_GOAL);
+  if (id === "blaze") return q === "cp_meet" || (q === "cp_test" && S.shells >= blazeGoal());
+  if (id === "hazel") return q === "mm_meet" || (q === "mm_test" && mmReady());
+  if ((S.requests || []).some(x => x.npc === id)) return true;
   if (id === "pip" || id === "wren") return q === "gh_meet";
   if (id === "ramos") return S.unlocked.includes("galehollow") && !S.flags.cupWon && S.island === "galehollow" && q !== "gh_meet";
-  if (id === "bo") return q === "cp_go" || q === "gh_go";
+  if (id === "bo") return q === "cp_go" || q === "gh_go" || q === "mm_go";
   return false;
 }
 function storyMapNpcs(isl) {
@@ -3170,11 +3451,13 @@ function storyStock(id, st) {
   const add = (sid, o) => { const c = newCard(sid, o); c.story = true; st.stock.push(c); return c; };
   if (id === "tobi") add("D12", { c: "good" });
   if (id === "rizzo") { add("C15", { f: "holo", fake: true }); add("C3", {}); add("C11", { c: "good" }); }
+  if (id === "toad") { add("M15", { f: "holo", fake: true }); add("M4", {}); add("M13", { c: "good" }); add("G17", { fake: true }); }
   if (id === "pip") { const z = add("G15", { f: "holo" }); S.flags.zephUid = z.u; add("G2", {}); add("G9", {}); add("G5", { c: "good" }); }
 }
 function lockedRouteLine(dest) {
   if (dest === "cinderpeak") return "Cinderpeak? Not yet, matey. Marla made me promise not to take you until you've earned her stamp.";
   if (dest === "galehollow") return "Galehollow's a long, windy sail. Blaze asked me to wait until you've passed his test on Cinderpeak.";
+  if (dest === "mossmere") return "Mossmere? The ferry's still being fixed, matey. Earn all three of the first stamps, and I'll have her ready.";
   return "Not today.";
 }
 function cassStarterFor(sid) { return { H1: "H3", H2: "H1", H3: "H2" }[sid]; }
@@ -3191,7 +3474,13 @@ async function interact(tgt) {
 }
 async function enterBuilding(b) {
   const isl = S.island;
-  if (b.id === "cottage") { if (S.quest === "intro") return introCottage(); return sleepHere("Grandpa's Cottage. Your bed is by the window"); }
+  if (b.id === "cottage") {
+    if (S.quest === "intro") return introCottage();
+    const i = await ask("narrator", "Grandpa's Cottage. Your bed is by the window, and Grandpa's old display case is by the door.", ["Sleep", "Display case", "Not now"]);
+    if (i === 0) return sleepHere("Your bed is by the window", true);
+    if (i === 1) return openCase();
+    return;
+  }
   if (S.quest === "intro") { await say("ledger", "..."); return say("narrator", "You should go to Grandpa's Cottage first. It's up the path to the northwest."); }
   if (b.id === "shop") return openPackShop(isl);
   if (b.id === "counter") return openCounter(isl);
@@ -3200,6 +3489,7 @@ async function enterBuilding(b) {
   if (b.id === "lighthouse") return say("narrator", "The lighthouse door is locked. Old Marla is standing outside, watching the sea.");
   if (b.id === "hall") return say("narrator", "The Trade Hall is packed with shouting traders. Blaze is out front.");
   if (b.id === "windmill") return say("narrator", "The windmill creaks and groans. Old Hank is outside with a broom.");
+  if (b.id === "greenhouse") return say("narrator", "The Greenhouse is warm and full of plants. Hazel is out front, watering a very large fern.");
 }
 async function talkTo(id) {
   const n = NPCS[id], st = npcState(id);
@@ -3207,20 +3497,22 @@ async function talkTo(id) {
   if (n.role === "ferry") return ferry();
   if (n.role === "keeper") return n.shop === "packs" ? openPackShop(S.island) : openCounter(S.island);
   if (n.role === "master") return masterTalk(id);
-  if (n.role === "rival") return cassTalk();
+  if (n.role === "rival") return S.island === "mossmere" ? cassMossmere() : cassTalk();
   if (n.role === "host") return kiteCup();
   if (!st.met && n.intro) { st.met = true; await talk(id, n.intro); }
   st.met = true;
   const opts = [], acts = [];
+  if ((S.requests || []).some(q => q.npc === id)) { opts.push("About your request ❗"); acts.push("req"); }
   if (n.role === "job") { opts.push(jobDoneToday(id) ? "Any more work? (done today)" : "Help with work"); acts.push("job"); }
   if (n.role === "trader" || n.role === "con" || (n.role === "job" && n.stock)) { opts.push(n.personality === "hoarder" ? "Sell to Pomfrey" : "Trade"); acts.push("trade"); }
-  if ((n.role === "trader" || (n.role === "job" && n.stock)) && n.personality !== "hoarder") { opts.push("Tide Clash (practice)"); acts.push("clash"); }
+  if ((n.role === "trader" || (n.role === "job" && n.stock)) && n.personality !== "hoarder") { opts.push(ladderLabel(id)); acts.push("clash"); }
   opts.push("Chat", "Bye"); acts.push("chat", "bye");
   const i = await ask(id, greet(id), opts);
   const a = acts[i];
   if (a === "trade") return openTrade(id);
   if (a === "job") return playJob(id);
   if (a === "clash") return practice(id);
+  if (a === "req") return reqTalk(id);
   if (a === "chat") { const lines = n.chat; await say(id, lines[st.chat++ % lines.length]); }
 }
 function greet(id) {
@@ -3231,19 +3523,6 @@ function greet(id) {
   if (rep < 30) return base + " I've heard you lowball people.";
   return base;
 }
-async function practice(id) {
-  const n = NPCS[id], st = npcState(id);
-  const res = await tideClash({ id, name: n.name, deck: npcDeck(id), level: NPC_LEVEL[n.personality] ?? 1 });
-  if (!res) return;
-  if (res === "you") {
-    if (S.flags.practiceDay !== S.day) { S.flags.practiceDay = S.day; S.flags.practicePaid = 0; }
-    if (st.lastWin !== S.day && S.flags.practicePaid < 2) { st.lastWin = S.day; S.flags.practicePaid++; S.shells += 20; repChange(n.island, 1); renderHud(); await say(id, "Good game! Here, 20 Shells for winning. That's the rule around here."); }
-    else await say(id, st.lastWin === S.day ? "Good game! I only pay out once a day though." : "Good game! Everybody's paid out enough prizes today. Come back tomorrow for more.");
-    st.lastWin = S.day;
-  } else if (res === "them") await say(id, "Good game! Want a rematch sometime?");
-  else await say(id, "A draw! Ha. Good game.");
-}
-
 // ---------- Ledger button ----------
 async function ledgerTalk() {
   if (UI.busy || !S.flags.ledger) return;
@@ -3296,6 +3575,7 @@ async function masterTalk(id) {
   if (id === "marla") return marlaTalk();
   if (id === "blaze") return blazeTalk();
   if (id === "pip" || id === "wren") return twinsTalk(id);
+  if (id === "hazel") return hazelTalk();
 }
 async function marlaTalk() {
   const q = S.quest;
@@ -3329,12 +3609,13 @@ async function marlaTalk() {
       S.stamps.push("tide"); S.flags.magnifier = true; S.unlocked.push("cinderpeak"); S.quest = "cp_go";
       await say("narrator", "You got the Driftwood Charter Stamp! And Marla's old magnifier!");
       await say("marla", "With that magnifier you can check any card for fakes. Look at it in your Binder and tap Magnifier. There are fakes going around. Trust your eyes, not a stranger's smile.");
+      await say("marla", "And learn the three tells. A fake's name is spelled wrong. Its gems don't match its rarity. And the picture sits crooked. Spot three fakes and the Fair Traders' Club will hear about it.");
       await say("marla", "Now. Captain Bo will take you to Cinderpeak. Go see Blaze. And {name}? Trade fair.");
       addLetter("l2");
       toast("New letter from Grandpa! Check your Journal.", "good");
     } else if (res) await say("marla", "Not this time. Change up your deck, read the weather, and try me again whenever you're ready.");
   }
-  if (["cp_go", "cp_meet", "cp_test", "gh_go", "gh_meet", "gh_test", "ch1_done"].includes(S.quest)) await say("marla", pick(Math.random, NPCS.marla.chat));
+  if (["cp_go", "cp_meet", "cp_test", "gh_go", "gh_meet", "gh_test", "ch1_done", "mm_go", "mm_meet", "mm_test", "mm_done"].includes(S.quest)) await say("marla", pick(Math.random, NPCS.marla.chat));
 }
 async function cassIntro() {
   S.flags.cassStarter = cassStarterFor(S.starter);
@@ -3363,7 +3644,7 @@ async function cassTalk() {
   await say("cass", pick(Math.random, ["What? I'm busy. Being better than you takes a lot of work.", "My binder has more cards than yours. Probably. I haven't counted. Okay, I have.", "Stop following me."]));
 }
 
-const BLAZE_GOAL = 900;
+const blazeGoal = () => (S && S.flags.blazeGoal) || 900;
 async function blazeTalk() {
   const q = S.quest;
   if (q === "cp_meet") {
@@ -3373,16 +3654,17 @@ async function blazeTalk() {
       "My test is simple. Here's 300 Shells. Turn it into 900. Pay me back 900 Shells in three days and the stamp is yours!",
       "Buy low, sell high. Cheap here, pricey there. Think! Move! GO!",
     ]);
-    S.shells += 300; S.flags.blazeDue = S.day + 3; S.quest = "cp_test"; renderHud();
-    await say("ledger", `Squawk! ${BLAZE_GOAL} Shells by the end of day ${S.flags.blazeDue}! Ember cards are cheap here and pricey on Driftwood. Odd jobs pay too. And watch out for that Rizzo character.`);
+    S.shells += 300; S.flags.blazeDue = S.day + 3; S.flags.blazeGoal = 900; S.quest = "cp_test"; renderHud();
+    await say("ledger", `Squawk! ${blazeGoal()} Shells by the end of day ${S.flags.blazeDue}! Ember cards are cheap here and pricey on Driftwood. Odd jobs pay too. And watch out for that Rizzo character.`);
     return;
   }
   if (q === "cp_test") {
-    if (S.shells < BLAZE_GOAL) { await say("blaze", `${S.shells} Shells? I need ${BLAZE_GOAL}! You've got until the end of day ${S.flags.blazeDue}. Tick tock!`); return; }
-    const i = await ask("blaze", `${S.shells} Shells! Ready to pay me back ${BLAZE_GOAL}?`, [`Pay ${BLAZE_GOAL} ◈`, "Not yet"]);
+    const goal = blazeGoal();
+    if (S.shells < goal) { await say("blaze", `${S.shells} Shells? I need ${goal}! You've got until the end of day ${S.flags.blazeDue}. Tick tock!`); return; }
+    const i = await ask("blaze", `${S.shells} Shells! Ready to pay me back ${goal}?`, [`Pay ${goal} ◈`, "Not yet"]);
     if (i !== 0) return;
-    S.shells -= BLAZE_GOAL; renderHud(); sfx("coin");
-    await talk("blaze", ["HA HA! Nine hundred! You tripled my money in three days! That's a TRADER!", "The Cinderpeak Charter Stamp is yours. Captain Bo will take you to Galehollow now. Tell the twins Blaze says hi! They'll argue about it."]);
+    S.shells -= goal; renderHud(); sfx("coin");
+    await talk("blaze", [goal === 900 ? "HA HA! Nine hundred! You tripled my money in three days! That's a TRADER!" : `HA HA! ${goal} Shells! Late fee and all! You got there, and that's what counts!`, "The Cinderpeak Charter Stamp is yours. Captain Bo will take you to Galehollow now. Tell the twins Blaze says hi! They'll argue about it."]);
     S.stamps.push("ember"); S.unlocked.push("galehollow"); S.quest = "gh_go";
     await say("narrator", "You got the Cinderpeak Charter Stamp!");
     addLetter("l3"); toast("New letter from Grandpa! Check your Journal.", "good");
@@ -3412,7 +3694,7 @@ async function afterTradeStory(npcId) {
   if (npcId === "pip" && S.quest === "gh_test" && S.cards.some(c => c.u === S.flags.zephUid)) {
     await talk("pip", ["We're BOTH happy? That never happens!"]);
     await talk("wren", ["It's true. I'm happy. Don't get used to it, Pip.", "The Galehollow Charter Stamp is yours. You earned it."]);
-    S.stamps.push("gale"); S.quest = "ch1_done";
+    S.stamps.push("gale"); S.quest = "ch1_done"; S.flags.ch1Day = S.day;
     sfx("win");
     await say("narrator", "You got the Galehollow Charter Stamp! That's three!");
     await cassFinale();
@@ -3429,11 +3711,11 @@ async function cassFinale() {
     "Can I tell you something? You can't tell anyone.",
     "Baron Vexley Hoard is my dad. He sends me to every island to win cards for his vault. Cards go in. They never come out.",
     "I used to think that was the best thing ever. Now I see you trading with everybody, and everybody's actually happy, and... I don't know.",
-    "Forget it. Forget I said anything. See you on Mossmere. If the ferry ever gets fixed.",
+    "Forget it. Forget I said anything. See you on Mossmere. The ferry's almost fixed.",
   ]);
   addLetter("l4");
   await say("ledger", "Squawk... Cass is the Baron's kid? I knew there was something fishy. And I know fish. New letter from Grandpa in your Journal!");
-  await say("narrator", "CHAPTER 1 COMPLETE! You can keep playing: finish your Binder pages, win the Kite Cup, and become the richest trader in the archipelago. More islands are coming in Chapter 2.");
+  await say("narrator", "CHAPTER 1 COMPLETE! Keep playing: finish your Binder pages and win the Kite Cup. Chapter 2 starts soon. Sleep, and see what tomorrow brings!");
 }
 
 async function kiteCup() {
@@ -3464,19 +3746,293 @@ function cupDeck(lv) {
 
 // ---------- day and arrival hooks ----------
 function storyNewDay() {
-  if (S.quest === "cp_test" && S.day > S.flags.blazeDue) { S.flags.blazeLate = 1; S.flags.blazeDue = S.day + 3; }
+  if (S.quest === "cp_test" && S.day > S.flags.blazeDue) { S.flags.blazeLate = 1; S.flags.blazeDue = S.day + 3; S.flags.blazeGoal = Math.min(1200, blazeGoal() + 100); }
+  if (S.quest === "ch1_done" && !S.unlocked.includes("mossmere") && S.day > (S.flags.ch1Day ?? 0)) { S.unlocked.push("mossmere"); S.quest = "mm_go"; addLetter("l5"); S.flags.mmNews = 1; dailyRequests(); }
 }
 async function storyMorning() {
   if (S.flags.blazeLate) {
     S.flags.blazeLate = 0;
-    await say("ledger", `Squawk! You missed Blaze's deadline. But a parrot heard Blaze say he'll give you three more days. New deadline: end of day ${S.flags.blazeDue}.`);
+    await say("ledger", `Squawk! You missed Blaze's deadline! He'll give you three more days, but now he wants ${blazeGoal()} Shells. He calls it a late fee. New deadline: end of day ${S.flags.blazeDue}.`);
+    if (blazeGoal() >= 1100) await say("ledger", "Psst. Cass heard about it and is telling everyone you're slow. Let's prove Cass wrong! Buy Ember cards here and sell them on Driftwood.");
   }
+  if (S.flags.mmNews) { S.flags.mmNews = 0; await say("ledger", "SQUAWK! Big news! Captain Bo fixed the ferry to Mossmere! And there's a letter from Grandpa in your Journal."); renderHud(); }
   if (S.time === 0 && S.day % 4 === 0) await say("ledger", pick(Math.random, LEDGER_TIPS));
 }
 async function storyArrive(dest) {
   if (dest === "cinderpeak" && S.quest === "cp_go") { S.quest = "cp_meet"; await say("ledger", "Squawk! It's HOT here! Cinderpeak! Blaze's Trade Hall is at the top of the island."); }
+  if (dest === "mossmere" && S.quest === "mm_go") { S.quest = "mm_meet"; await say("ledger", "Squawk! Squish, squish. It's so MUDDY! Mossmere! Hazel's Greenhouse is at the top of the island."); }
   if (dest === "galehollow" && S.quest === "gh_go") { S.quest = "gh_meet"; await say("ledger", "SQUAWK! Windy! Hold on to me! Galehollow! The twins should be in the middle of the island."); }
   renderHud();
+}
+
+// ===== 15b_more.js =====
+// ---------- tastes, display case, requests, ranks, Tide Clash ladder, Mossmere ----------
+
+// ----- what each trader likes -----
+function tasteText(id) {
+  const n = NPCS[id];
+  if (!n) return "";
+  if (n.twin) return "Pip likes 🌙 Shade cards · Wren likes ✨ Glow cards";
+  if (n.personality === "hoarder") return "Only buys Rare cards and better";
+  if (n.role === "con") return "Says everything is rare · Use your magnifier before you buy!";
+  const likes = [], no = [], w = n.wants || {}, dl = n.dislikes || {};
+  if (w.species) for (const sid in w.species) likes.push(SPECIES[sid].name);
+  if (w.types) for (const t in w.types) likes.push(`${TYPES[t].icon} ${TYPES[t].name} cards`);
+  if (w.holo) likes.push("✨ shiny cards");
+  if (dl.types) for (const t in dl.types) no.push(`${TYPES[t].name} cards`);
+  const bits = [];
+  if (likes.length) bits.push("Likes: " + likes.join(", "));
+  if (no.length) bits.push("Not a fan of: " + no.join(", "));
+  if (n.fussy) bits.push("Picky about condition");
+  if (n.personality === "kid") bits.push("Doesn't care about condition");
+  return bits.join(" · ");
+}
+function likesCard(id, c) {
+  const n = NPCS[id]; if (!n || c.fake) return false;
+  const sp = SPECIES[c.s];
+  if (n.twin) return sp.type === "shade" || sp.type === "glow";
+  const w = n.wants || {};
+  return !!((w.species && w.species[c.s]) || (w.types && w.types[sp.type]) || (w.holo && c.f !== "normal"));
+}
+
+// ----- fakes: spotting them earns a reward -----
+function noteFakeSpotted(c) {
+  S.flags.spotted = S.flags.spotted || {};
+  if (!c.fake || S.flags.spotted[c.u]) return;
+  S.flags.spotted[c.u] = 1;
+  S.stats.fakesSpotted = (S.stats.fakesSpotted || 0) + 1;
+  if (S.stats.fakesSpotted === 3 && !S.rewards.sharpEyes) {
+    S.rewards.sharpEyes = 1; S.shells += 60; renderHud(); sfx("coin");
+    sayWhenFree("ledger", "SQUAWK! That's three fakes you've spotted! Word got around, and the Fair Traders' Club sent you 60 Shells. Sharp eyes!");
+  }
+}
+
+// ----- Grandpa's display case: hold cards, earn tips -----
+const caseSlots = () => 3 + (S.stamps.length >= 3 ? 1 : 0) + (S.stamps.length >= 4 ? 1 : 0);
+const caseCards = () => S.cards.filter(c => c.dc);
+const caseTip = c => c.fake ? 0 : clamp(roundHalf(cardValue(c, "driftwood") * 0.02), 1, 15);
+function caseMorning() {
+  const cs = caseCards(); if (!cs.length) return null;
+  const tot = cs.reduce((a, c) => a + caseTip(c), 0), fake = cs.some(c => c.fake);
+  S.shells += tot; S.stats.caseTips = (S.stats.caseTips || 0) + tot;
+  return `Visitors came to see your display case and left ${plural(tot, "Shell")} in the tip jar!` + (fake ? " A few of them whispered that one of your cards looks fake..." : "");
+}
+function openCase() {
+  const body = el("div", { class: "case" });
+  const pa = openPanel("Grandpa's display case", body, { cls: "wide" });
+  const draw = () => {
+    body.innerHTML = "";
+    const cs = caseCards(), slots = caseSlots();
+    body.append(el("p", null, "Cards in the case stay safe at home. Every morning, visitors come to look and leave tips. Better cards get bigger tips."),
+      el("div", { class: "strip wrap" },
+        cs.map(c => el("div", { class: "forsale" }, cardEl(c, { size: "sm", onClick: () => cardDetail(c) }), el("small", null, `about ${caseTip(c)} ◈ a day`),
+          el("button", { class: "btn tiny", onclick: () => { delete c.dc; saveGame(); sfx("back"); draw(); } }, "Take out"))),
+        Array.from({ length: Math.max(0, slots - cs.length) }, () => el("button", { class: "card sz-sm slotbtn", onclick: async () => {
+          const c = await pickCard("Which card goes in the case?", S.cards.filter(c => !c.dc && !c.lk));
+          if (!c) return;
+          c.dc = true; S.deck = S.deck.filter(u => u !== c.u); saveGame(); sfx("select"); draw();
+        } }, el("span", { class: "big" }, "+"), el("small", null, "Add a card")))),
+      el("p", { class: "muted small" }, `${slots} spots. ${slots < 5 ? "You get more spots as you earn Charter Stamps. " : ""}Cards in the case can't be traded, sold or played until you take them out.`),
+      S.stats.caseTips ? el("p", { class: "muted small" }, `Tips so far: ${S.stats.caseTips} ◈`) : "");
+  };
+  draw();
+}
+
+// ----- townsfolk requests -----
+const REQ_LINES = {
+  kid: ["I want a {card} SO BAD! If you find one, I'll give you {reward}!", "Do you have a {card}? My friend has one and now I need one too! {reward}!"],
+  shy: ["Um... my little sister really wants a {card}. If you find one, I could give you {reward}.", "Sorry to ask... could you find me a {card}? I'd pay {reward}."],
+  fair: ["I'm looking for a {card} for a friend. Bring me one and I'll pay {reward}.", "Know where I can get a {card}? I'll pay {reward} for one."],
+  haggler: ["I've got a buyer lined up for a {card}! Find me one and I'll pay {reward}. That's my real price, no haggling!"],
+  grump: ["I need a {card}. Don't ask why. {reward}. Take it or leave it."],
+  collector: ["My collection is missing a {card}. I'd gladly pay {reward} for one."],
+};
+const an = w => (/^[AEIOU]/i.test(w) ? "an " : "a ") + w;
+function reqDesc(q) { return an(`${q.cond === "mint" ? "Mint " : ""}${SPECIES[q.sid].name}`); }
+function reqReward(q) { return [q.sh ? plural(q.sh, "Shell") : null, q.card ? an(`${FINISH[q.card.f].name !== "Normal" ? FINISH[q.card.f].name + " " : ""}${SPECIES[q.card.s].name} card`) : null].filter(Boolean).join(" and "); }
+function dailyRequests() {
+  S.requests = (S.requests || []).filter(q => q.until >= S.day);
+  for (const isl of openIslands()) {
+    if (S.requests.some(q => q.island === isl)) continue;
+    const r = rngFor(S.market.seed, "req", isl, S.day);
+    if (r() > 0.6) continue;
+    const who = Object.keys(NPCS).filter(id => { const n = NPCS[id]; return n.island === isl && (n.role === "trader" || n.role === "job") && n.personality !== "hoarder"; });
+    if (!who.length) continue;
+    const npc = pick(r, who), n = NPCS[npc];
+    const set = pick(r, openIslands());
+    const rar = weighted(r, [["C", 5], ["U", 4], ["R", 1]]);
+    const sp = pick(r, speciesOf(set).filter(s => s.rarity === rar));
+    const cond = n.fussy || r() < 0.2 ? "mint" : "any";
+    const q = { npc, island: isl, sid: sp.id, cond, day: S.day, until: S.day + 3 };
+    const worth = speciesValue(sp.id, isl);
+    if (r() < 0.3) { q.card = rollCard(r, isl, { U: 6, R: 4 }, { cond: "mint" }); q.sh = Math.max(10, roundHalf(worth * 1.6) + 15 - cardValue(q.card, isl)); }
+    else q.sh = roundHalf(worth * 1.6) + 15;
+    q.line = pick(r, REQ_LINES[n.personality] || REQ_LINES.fair);
+    S.requests.push(q);
+  }
+}
+async function reqTalk(id) {
+  const q = S.requests.find(x => x.npc === id); if (!q) return;
+  const line = q.line.replace("a {card}", reqDesc(q)).replace("{card}", reqDesc(q).replace(/^an? /, "")).replace("{reward}", reqReward(q));
+  const ok = S.cards.filter(c => c.s === q.sid && !c.lk && !c.dc && (q.cond !== "mint" || c.c === "mint"));
+  if (!q.seen) { q.seen = true; await say(id, line); }
+  if (!ok.length) { await say(id, `${q.seen ? "Still looking for " + reqDesc(q) + ". " : ""}I'll wait until the end of day ${q.until}.${q.cond === "mint" ? " It has to be Mint!" : ""}`); return; }
+  const i = await ask(id, `Oh! Do you have ${reqDesc(q)} for me? I'll give you ${reqReward(q)}.`, ["Give it", "Not yet"]);
+  if (i !== 0) return;
+  const c = ok.length === 1 ? ok[0] : await pickCard(`Which ${SPECIES[q.sid].name}?`, ok);
+  if (!c) return;
+  const copies = S.cards.filter(x => x.s === c.s && !x.fake).length;
+  if (copies === 1 && !c.fake && !(await confirmBox(`That's your only ${cardName(c)}. It will leave your Binder page. Give it anyway?`, "Give it", "Keep it"))) return;
+  if (c.fake) {
+    repChange(NPCS[id].island, -3);
+    await say(id, "Wait a minute. The name's spelled wrong! This is a FAKE! Forget it. I'll find one somewhere else.");
+    S.requests = S.requests.filter(x => x !== q);
+    noteFakeSpotted(c); S.known[c.u] = { price: 0, day: S.day, island: S.island, fake: true }; saveGame(); return;
+  }
+  removeCard(c.u);
+  S.shells += q.sh || 0;
+  if (q.card) { const nc = newCard(q.card.s, { f: q.card.f, c: q.card.c, p: q.card.p }); S.cards.push(nc); }
+  repChange(NPCS[id].island, 3);
+  S.stats.requests = (S.stats.requests || 0) + 1;
+  S.requests = S.requests.filter(x => x !== q);
+  S.journal.unshift({ day: S.day, island: S.island, who: NPCS[id].name, gave: [cardName(c)], got: q.card ? [SPECIES[q.card.s].name] : [], shGave: 0, shGot: q.sh || 0, valGave: cardValue(c), valGot: (q.sh || 0) + (q.card ? cardValue(q.card) : 0), request: true });
+  renderHud(); sfx("deal"); saveGame();
+  await say(id, pick(Math.random, ["Thank you SO much! Here's your reward!", "You found one! You're the best. Here you go!", "Perfect. A deal's a deal. Here."]));
+  toast(`${ISLANDS[NPCS[id].island].name} reputation went up!`, "good");
+  checkPageRewards();
+}
+
+// ----- trader rank -----
+const RANKS = [["Deckhand", 0], ["Card Trader", 100], ["Merchant", 300], ["Master Trader", 550], ["Legend of the Isles", 850]];
+function traderScore() {
+  const pages = ISLAND_ORDER.filter(k => S.rewards[k]).length;
+  const reps = openIslands().map(k => S.rep[k] ?? 50), avg = reps.reduce((a, b) => a + b, 0) / Math.max(1, reps.length);
+  return S.stamps.length * 100 + pages * 60 + Math.min(S.stats.trades || 0, 100) * 2 + (S.stats.requests || 0) * 15 + (S.stats.ladder || 0) * 10 + Math.max(0, roundHalf((avg - 50) * 2)) + (S.rewards.trophy ? 100 : 0);
+}
+function rankOf(score) { let i = 0; RANKS.forEach(([, at], k) => { if (score >= at) i = k; }); return i; }
+function checkRank() {
+  if (!S || !S.stats) return;
+  const i = rankOf(traderScore());
+  if (S.rankSeen == null) { S.rankSeen = i; return; }
+  if (i > S.rankSeen) { S.rankSeen = i; sfx("win"); toast(`New rank: ${RANKS[i][0]}!`, "good"); sayWhenFree("ledger", `SQUAWK! Everybody's talking about you! You're now a ${RANKS[i][0]}!${i === RANKS.length - 1 ? " That's the highest rank there is! Grandpa will be so proud." : ""}`); }
+}
+function rankBlock() {
+  const sc = traderScore(), i = rankOf(sc), next = RANKS[i + 1];
+  const pct = next ? Math.floor((sc - RANKS[i][1]) / (next[1] - RANKS[i][1]) * 100) : 100;
+  return el("div", { class: "rank" }, el("h3", null, `Rank: ${RANKS[i][0]}`),
+    el("div", { class: "bar" }, el("i", { style: { width: pct + "%" } })),
+    el("small", { class: "muted" }, next ? `${sc} points. ${next[1] - sc} more to ${next[0]}.` : `${sc} points. The top rank!`),
+    el("p", { class: "muted small" }, "Earn points with stamps, finished Binder pages, trades, helping townsfolk, Tide Clash levels and a good reputation."));
+}
+
+// ----- Tide Clash ladder: every trader has 3 levels -----
+const LADDER_PRIZE = [40, 80, 150];
+function ladderDeck(id, tier) {
+  const n = NPCS[id], r = rngFor(S.market.seed, "ladder", id, tier);
+  const sets = (n.stock && n.stock.sets) || [n.island];
+  const rar = [[["C", 7], ["U", 3]], [["C", 3], ["U", 5], ["R", 2]], [["U", 3], ["R", 5], ["E", 2]]][tier];
+  const deck = [];
+  while (deck.length < 8) { const want = weighted(r, rar); const pool = speciesOf(pick(r, sets)).filter(s => s.rarity === want); if (pool.length) deck.push({ s: pick(r, pool).id }); }
+  return deck;
+}
+function ladderLabel(id) { const w = (S.ladder || {})[id] || 0; return w >= 3 ? "Tide Clash (rematch)" : `Tide Clash (level ${w + 1} of 3)`; }
+async function practice(id) {
+  const n = NPCS[id], st = npcState(id);
+  S.ladder = S.ladder || {};
+  const won = S.ladder[id] || 0, champ = won >= 3, tier = Math.min(2, won);
+  if (!champ && won === 0 && !S.flags.ladderTold) { S.flags.ladderTold = 1; await say("ledger", "Squawk! Every trader has three Tide Clash levels. Beat a level for a prize. Each level gets tougher!"); }
+  const res = await tideClash({ id, name: n.name + (champ ? "" : ` (level ${tier + 1})`), deck: ladderDeck(id, tier), level: tier });
+  if (!res) return;
+  if (S.flags.ladderDay !== S.day) { S.flags.ladderDay = S.day; S.flags.ladderPaid = 0; }
+  if (res === "you" && !champ && S.flags.ladderPaid >= 2) { await say(id, `Great game! But everybody's paid out enough level prizes today. ${tier === 2 ? "Beat me again tomorrow to become the champ!" : `Beat me again tomorrow to move up to level ${tier + 2}!`}`); return; }
+  if (res === "you" && !champ) {
+    S.flags.ladderPaid++;
+    S.ladder[id] = won + 1; S.stats.ladder = (S.stats.ladder || 0) + 1;
+    const prize = LADDER_PRIZE[tier]; S.shells += prize; repChange(n.island, 1);
+    let card = null;
+    if (tier === 2) { const r = rngFor(S.market.seed, "ladderprize", id); card = rollCard(r, n.island === "-" ? "driftwood" : n.island, { R: 7, E: 3 }, { cond: "mint" }); S.cards.push(card); }
+    renderHud(); sfx("coin");
+    await say(id, [`Okay, okay! You win. Here's ${prize} Shells. Next time I'm using my real deck!`, `Wow, you're good! ${prize} Shells for you. Next time, I'm bringing out my BEST cards.`, `You beat my best deck! Here's ${prize} Shells and my ${card ? cardName(card) : "card"}. You're the champ around here!`][tier]);
+    if (card) checkPageRewards();
+    saveGame(); return;
+  }
+  if (res === "you") {
+    if (S.flags.practiceDay !== S.day) { S.flags.practiceDay = S.day; S.flags.practicePaid = 0; }
+    if (st.lastWin !== S.day && S.flags.practicePaid < 2) { st.lastWin = S.day; S.flags.practicePaid++; S.shells += 20; repChange(n.island, 1); renderHud(); await say(id, "Good game, champ! Here's 20 Shells. That's the rule around here."); }
+    else await say(id, st.lastWin === S.day ? "Good game! I only pay out once a day though." : "Good game! Everybody's paid out enough prizes today. Come back tomorrow for more.");
+    st.lastWin = S.day;
+  } else if (res === "them") await say(id, champ ? "Ha! Got you this time. Rematch anytime." : `Good game! Try level ${tier + 1} again whenever you want. Read the weather!`);
+  else await say(id, "A draw! Ha. Good game. A draw doesn't count, though. Play me again!");
+}
+
+// ----- job levels -----
+const jobLevel = id => Math.min(3, Math.floor(((S.jobsDone || {})[id] || 0) / 3));
+const jobCap = lv => 120 + 40 * lv;
+
+// ----- Mossmere: Chapter 2 -----
+const MM_GOAL = 12, MM_REP = 65;
+function mmReady() { return ownedCount("mossmere") >= MM_GOAL && (S.rep.mossmere ?? 50) >= MM_REP; }
+async function hazelTalk() {
+  const q = S.quest;
+  if (q === "mm_meet") {
+    await talk("hazel", [
+      "Well, look at you. Three Charter Stamps and mud on your shoes. Welcome to Mossmere.",
+      "I'm Hazel. I grow things. Plants, mostly. Sometimes traders.",
+      "My test is the hardest one yet, so listen close.",
+      `First, find ${MM_GOAL} different Mossmere Driftlings. Second, earn a Trusted reputation here. That's ${MM_REP} or more. People on Mossmere have long memories.`,
+      "Then beat me at Tide Clash. I don't go easy. Ask Rook.",
+    ]);
+    S.quest = "mm_test";
+    S.flags.cassAt = { island: "mossmere", x: 12, y: 8, dir: "down" }; refreshMapNpcs();
+    await say("ledger", "Squawk! Help townsfolk with their requests and trade fair to raise your reputation. And... is that Cass over there?");
+    return;
+  }
+  if (q === "mm_test") {
+    const n = ownedCount("mossmere"), rep = S.rep.mossmere ?? 50;
+    if (!mmReady()) {
+      const need = [n < MM_GOAL ? `${n} of ${MM_GOAL} Mossmere cards` : null, rep < MM_REP ? `a reputation of ${rep} here (you need ${MM_REP})` : null].filter(Boolean).join(", and ");
+      await say("hazel", `Not yet. You've got ${need}. Patience. Gardens don't grow in a day.`); return;
+    }
+    const i = await ask("hazel", "Twelve cards and a good name on Mossmere. Rook would grin. Ready to play me?", ["Let's play!", "Fix my deck first", "Not yet"]);
+    if (i === 1) { await new Promise(r => openDeck(r)); return hazelTalk(); }
+    if (i !== 0) return;
+    const res = await tideClash({ id: "hazel", name: "Hazel", level: 2, deck: ["M9", "M13", "M15", "M16", "M17", "M18", "M14", "M19"].map(s => ({ s })) });
+    if (res === "you") {
+      sfx("win");
+      await talk("hazel", ["Well. You grew into a real trader, didn't you?", "Here's the Mossmere Charter Stamp. Four stamps. That's more than most people ever see."]);
+      S.stamps.push("bloom"); S.quest = "mm_done";
+      await say("narrator", "You got the Mossmere Charter Stamp! That's four!");
+      addLetter("l6");
+      await cassFinale2();
+    } else if (res) await say("hazel", "Not this time. Bloom cards love sunshine. Read the weather, and try again whenever you're ready.");
+    return;
+  }
+  await say("hazel", pick(Math.random, NPCS.hazel.chat));
+}
+async function cassMossmere() {
+  if (!S.flags.cassBattle2) {
+    const i = await ask("cass", "You again. Fine. Rematch. My dad gave me some new cards from the vault. Scared?", ["You're on!", "Not now"]);
+    if (i !== 0) return;
+    const deck = [{ s: S.flags.cassStarter || "H1" }, { s: "M18" }, { s: "C17" }, { s: "D16" }, { s: "M17" }, { s: "G16" }, { s: "M9" }, { s: "C14" }];
+    const res = await tideClash({ id: "cass", name: "Cass", level: 2, deck });
+    if (res === "you") { S.flags.cassBattle2 = 1; S.shells += 200; renderHud(); await talk("cass", ["...Okay. You actually beat the vault cards. That's never happened.", "Here's 200 Shells. And... good game. I mean it this time."]); }
+    else if (res) await say("cass", "Ha! Vault cards win again. Come back when you can handle them.");
+    return;
+  }
+  await say("cass", pick(Math.random, ["Hazel's test is hard. Not that I tried it. I didn't. Shut up.", "I've been trading with people here. Like, actually trading. It's... kind of fun?", "Don't tell my dad I said hi to you."]));
+}
+async function cassFinale2() {
+  await sleep(300);
+  await talk("cass", [
+    "Four stamps. Okay. You win. Not the card game. The whole thing.",
+    "I told my dad I'm done winning cards for his vault. He didn't say anything. He just looked at his cards for a really long time.",
+    "Here. This was in the vault. It's yours now. Cards should get traded, right? Not locked up.",
+  ]);
+  S.cards.push(newCard("D19", { f: "holo" })); sfx("rare");
+  await say("narrator", "Cass gave you a Holo Pearlcrest!");
+  await say("ledger", "Squawk! Another letter from Grandpa. Check your Journal!");
+  await say("narrator", "CHAPTER 2 COMPLETE! Keep going: finish all four Binder pages for the Grand Binder Trophy, help the townsfolk, and climb to Legend of the Isles.");
+  checkPageRewards();
 }
 
 // ===== 16_parent.js =====
